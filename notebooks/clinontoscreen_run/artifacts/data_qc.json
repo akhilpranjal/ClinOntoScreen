@@ -1,0 +1,180 @@
+{
+  "historical_n": 6103,
+  "historical_positive_count": 1766,
+  "historical_prevalence": 0.289365885630018,
+  "temporal_test_n": 4260,
+  "temporal_test_positive_count": 983,
+  "temporal_test_prevalence": 0.23075117370892018,
+  "cohort_flow": {
+    "historical": {
+      "rows_in_file": 15560,
+      "adults_18_plus": 9693,
+      "no_reported_diabetes": 7998,
+      "no_reported_prediabetes": 7062,
+      "valid_hba1c": 6103,
+      "screen_positive": 1766
+    },
+    "temporal_test": {
+      "rows_in_file": 11933,
+      "adults_18_plus": 8153,
+      "no_reported_diabetes": 6803,
+      "no_reported_prediabetes": 5907,
+      "valid_hba1c": 4260,
+      "screen_positive": 983
+    }
+  },
+  "capacity_ceiling": {
+    "0.1": {
+      "historical_prevalence": 0.289365885630018,
+      "sensitivity_ceiling": 0.3455832389580974
+    },
+    "0.2": {
+      "historical_prevalence": 0.289365885630018,
+      "sensitivity_ceiling": 0.6911664779161948
+    },
+    "0.3": {
+      "historical_prevalence": 0.289365885630018,
+      "sensitivity_ceiling": 1.0
+    }
+  },
+  "unharmonized_variables": [
+    "BPQ040A",
+    "BPXODI4",
+    "BPXOSY4",
+    "MCQ300C",
+    "PAD660",
+    "PAD675",
+    "PAD800",
+    "PAD820",
+    "PAQ650",
+    "PAQ665",
+    "WTMEC2YR",
+    "WTMECPRP"
+  ],
+  "historical_missing_fraction": {
+    "age_years": 0.0,
+    "income_poverty_ratio": 0.1392757660167131,
+    "bmi": 0.015238407340652139,
+    "waist_cm": 0.043585122071112564,
+    "hdl_chol_mgdl": 0.020809437981320664,
+    "leisure_activity_minutes": 0.00032770768474520726,
+    "sedentary_minutes": 0.0070457152220219565,
+    "systolic_bp_mean": 0.09732918236932656,
+    "diastolic_bp_mean": 0.09732918236932656,
+    "sex_code": 0.0,
+    "race_ethnicity_code": 0.0,
+    "education_code": 0.06078977552023595,
+    "hypertension_history": 0.0008192692118630182,
+    "hypertension_treatment": 0.720956906439456,
+    "ever_smoked_100_cigs": 0.00032770768474520726,
+    "heart_failure_history": 0.061445190889726366,
+    "coronary_heart_disease_history": 0.061609044732098966,
+    "angina_history": 0.06259216778633458,
+    "heart_attack_history": 0.060953629362608557,
+    "stroke_history": 0.060953629362608557
+  },
+  "temporal_missing_fraction": {
+    "age_years": 0.0,
+    "income_poverty_ratio": 0.12464788732394366,
+    "bmi": 0.013145539906103286,
+    "waist_cm": 0.04084507042253521,
+    "hdl_chol_mgdl": 0.04507042253521127,
+    "leisure_activity_minutes": 0.0,
+    "sedentary_minutes": 0.006572769953051643,
+    "systolic_bp_mean": 0.03192488262910798,
+    "diastolic_bp_mean": 0.03192488262910798,
+    "sex_code": 0.0,
+    "race_ethnicity_code": 0.0,
+    "education_code": 0.05352112676056338,
+    "hypertension_history": 0.0007042253521126761,
+    "hypertension_treatment": 1.0,
+    "ever_smoked_100_cigs": 0.0016431924882629107,
+    "heart_failure_history": 0.053286384976525825,
+    "coronary_heart_disease_history": 0.05539906103286385,
+    "angina_history": 0.05516431924882629,
+    "heart_attack_history": 0.05352112676056338,
+    "stroke_history": 0.054225352112676053
+  },
+  "historical_source_report": {
+    "cycle": "2017_mar2020",
+    "label": "2017\u2013March 2020 pre-pandemic",
+    "loaded_files": [
+      "P_DEMO.xpt",
+      "P_DIQ.xpt",
+      "P_GHB.xpt",
+      "P_BMX.xpt",
+      "P_BPXO.xpt",
+      "P_BPQ.xpt",
+      "P_SMQ.xpt",
+      "P_PAQ.xpt",
+      "P_MCQ.xpt",
+      "P_HDL.xpt"
+    ],
+    "skipped_files": [],
+    "missing_variables": {
+      "DEMO": [
+        "WTMEC2YR"
+      ],
+      "DIQ": [],
+      "GHB": [],
+      "BMX": [],
+      "BPXO": [
+        "BPXOSY4",
+        "BPXODI4"
+      ],
+      "BPQ": [],
+      "SMQ": [],
+      "PAQ": [
+        "PAD800",
+        "PAD820"
+      ],
+      "MCQ": [],
+      "HDL": []
+    },
+    "rows_after_merge": 15560
+  },
+  "temporal_source_report": {
+    "cycle": "2021_2023",
+    "label": "August 2021\u2013August 2023",
+    "loaded_files": [
+      "DEMO_L.xpt",
+      "DIQ_L.xpt",
+      "GHB_L.xpt",
+      "BMX_L.xpt",
+      "BPXO_L.xpt",
+      "BPQ_L.xpt",
+      "SMQ_L.xpt",
+      "PAQ_L.xpt",
+      "MCQ_L.xpt",
+      "HDL_L.xpt"
+    ],
+    "skipped_files": [],
+    "missing_variables": {
+      "DEMO": [
+        "WTMECPRP"
+      ],
+      "DIQ": [],
+      "GHB": [],
+      "BMX": [],
+      "BPXO": [
+        "BPXOSY4",
+        "BPXODI4"
+      ],
+      "BPQ": [
+        "BPQ040A"
+      ],
+      "SMQ": [],
+      "PAQ": [
+        "PAQ650",
+        "PAQ665",
+        "PAD660",
+        "PAD675"
+      ],
+      "MCQ": [
+        "MCQ300C"
+      ],
+      "HDL": []
+    },
+    "rows_after_merge": 11933
+  }
+}

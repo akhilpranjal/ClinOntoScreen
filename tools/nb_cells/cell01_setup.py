@@ -53,13 +53,21 @@ MASK_COLUMNS = ['waist_cm', 'systolic_bp_mean', 'diastolic_bp_mean', 'hypertensi
 def git_info():
     try:
         commit = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, timeout=10)
-        tag = subprocess.run(['git', 'describe', '--tags', '--exact-match'], capture_output=True, text=True, timeout=10)
+        exact = subprocess.run(['git', 'describe', '--tags', '--exact-match'], capture_output=True, text=True, timeout=10)
+        nearest = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True, timeout=10)
+        if exact.returncode == 0:
+            tag, relation = exact.stdout.strip(), 'exact'
+        elif nearest.returncode == 0:
+            tag, relation = nearest.stdout.strip(), 'ancestor'
+        else:
+            tag, relation = 'not_tagged', 'none'
         return {
             'commit_hash': commit.stdout.strip() if commit.returncode == 0 else 'unavailable',
-            'protocol_tag': tag.stdout.strip() if tag.returncode == 0 else 'not_tagged',
+            'protocol_tag': tag,
+            'tag_relation': relation,
         }
     except Exception:
-        return {'commit_hash': 'unavailable', 'protocol_tag': 'not_tagged'}
+        return {'commit_hash': 'unavailable', 'protocol_tag': 'not_tagged', 'tag_relation': 'none'}
 
 PROTOCOL = git_info()
 print('Work directory:', WORK_DIR)

@@ -108,7 +108,7 @@ def subgroup_rows(df, scores_dict):
         'hispanic': race.isin([1, 2]), 'nh_black': (race == 4), 'nh_white': (race == 3), 'nh_asian': (race == 6),
     }
     for gname, mask in groups.items():
-        mask = mask.fillna(False).to_numpy()
+        mask = pd.Series(np.asarray(mask)).fillna(False).to_numpy().astype(bool)
         if mask.sum() < 50 or y_test[mask].sum() < 10:
             continue
         for pname, score in scores_dict.items():
