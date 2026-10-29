@@ -27,18 +27,17 @@ CYCLE_CONFIGS = {
     },
 }
 
-FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ")
+FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ", "HDL")
 ESSENTIAL_STEMS = {"DEMO", "DIQ", "GHB", "BMX"}
 
 NUMERIC_FEATURES = [
-    "age_years", "income_poverty_ratio", "bmi", "waist_cm",
+    "age_years", "income_poverty_ratio", "bmi", "waist_cm", "hdl_chol_mgdl",
+    "leisure_activity_minutes", "sedentary_minutes",
     "systolic_bp_mean", "diastolic_bp_mean",
 ]
 CATEGORICAL_FEATURES = [
     "sex_code", "race_ethnicity_code", "education_code",
     "hypertension_history", "hypertension_treatment", "ever_smoked_100_cigs",
-    "vigorous_work_activity", "moderate_work_activity",
-    "vigorous_recreation_activity", "moderate_recreation_activity",
     "heart_failure_history", "coronary_heart_disease_history", "angina_history",
     "heart_attack_history", "stroke_history",
 ]
@@ -56,10 +55,11 @@ FILE_VARIABLES = {
     "GHB": ["SEQN", "LBXGH"],
     "BMX": ["SEQN", "BMXBMI", "BMXWAIST"],
     "BPXO": ["SEQN", "BPXOSY1", "BPXOSY2", "BPXOSY3", "BPXOSY4", "BPXODI1", "BPXODI2", "BPXODI3", "BPXODI4"],
-    "BPQ": ["SEQN", "BPQ020", "BPQ040"],
+    "BPQ": ["SEQN", "BPQ020", "BPQ030", "BPQ040A"],
     "SMQ": ["SEQN", "SMQ020"],
-    "PAQ": ["SEQN", "PAQ605", "PAQ620", "PAQ650", "PAQ665"],
-    "MCQ": ["SEQN", "MCQ160B", "MCQ160C", "MCQ160D", "MCQ160E", "MCQ160F"],
+    "PAQ": ["SEQN", "PAQ650", "PAQ665", "PAD660", "PAD675", "PAD680", "PAD800", "PAD820"],
+    "MCQ": ["SEQN", "MCQ160B", "MCQ160C", "MCQ160D", "MCQ160E", "MCQ160F", "MCQ300C"],
+    "HDL": ["SEQN", "LBDHDD"],
 }
 
 
@@ -157,17 +157,34 @@ def canonicalize_cycle(raw: pd.DataFrame, cycle: str) -> pd.DataFrame:
     out["income_poverty_ratio"] = _numeric(raw, "INDFMPIR")
     out["bmi"] = _numeric(raw, "BMXBMI")
     out["waist_cm"] = _numeric(raw, "BMXWAIST")
+    out["hdl_chol_mgdl"] = _numeric(raw, "LBDHDD")
     out["systolic_bp_mean"] = _mean_available(raw, [f"BPXOSY{i}" for i in range(1, 5)])
     out["diastolic_bp_mean"] = _mean_available(raw, [f"BPXODI{i}" for i in range(1, 5)])
     for source, target in {
-        "BPQ020": "hypertension_history", "BPQ040": "hypertension_treatment",
-        "SMQ020": "ever_smoked_100_cigs", "PAQ605": "vigorous_work_activity",
-        "PAQ620": "moderate_work_activity", "PAQ650": "vigorous_recreation_activity",
-        "PAQ665": "moderate_recreation_activity", "MCQ160B": "heart_failure_history",
+        "BPQ020": "hypertension_history", "BPQ040A": "hypertension_treatment",
+        "SMQ020": "ever_smoked_100_cigs",
+        "MCQ160B": "heart_failure_history",
         "MCQ160C": "coronary_heart_disease_history", "MCQ160D": "angina_history",
         "MCQ160E": "heart_attack_history", "MCQ160F": "stroke_history",
     }.items():
         out[target] = _clean_response(raw.get(source, pd.Series(np.nan, index=raw.index)))
+    # Leisure-time activity minutes, harmonized across the two very different PAQ instruments.
+    # Skip patterns encode "no such activity" as a blank minutes field, which is a true zero,
+    # not a refusal or an unknown response; refusals/don't-knows stay missing.
+    special_minutes = {7777.0, 9999.0, 77777.0, 99999.0}
+    if cycle == "2017_mar2020":
+        vigorous = _clean_response(raw.get("PAD660", pd.Series(np.nan, index=raw.index)), special_minutes)
+        vigorous = vigorous.where(_clean_response(raw.get("PAQ650", pd.Series(np.nan, index=raw.index)), set()) != 2, 0.0)
+        moderate = _clean_response(raw.get("PAD675", pd.Series(np.nan, index=raw.index)), special_minutes)
+        moderate = moderate.where(_clean_response(raw.get("PAQ665", pd.Series(np.nan, index=raw.index)), set()) != 2, 0.0)
+    else:
+        vigorous = _clean_response(raw.get("PAD820", pd.Series(np.nan, index=raw.index)), special_minutes)
+        moderate = _clean_response(raw.get("PAD800", pd.Series(np.nan, index=raw.index)), special_minutes)
+        # In the later cycle a blank minutes field means the reported frequency was zero.
+        vigorous = vigorous.fillna(0.0)
+        moderate = moderate.fillna(0.0)
+    out["leisure_activity_minutes"] = (vigorous.fillna(0.0) + moderate.fillna(0.0)).where(vigorous.notna() | moderate.notna())
+    out["sedentary_minutes"] = _clean_response(raw.get("PAD680", pd.Series(np.nan, index=raw.index)), special_minutes)
     out["reported_diabetes"] = _clean_response(raw.get("DIQ010", pd.Series(np.nan, index=raw.index)), set())
     out["reported_prediabetes"] = _clean_response(raw.get("DIQ160", pd.Series(np.nan, index=raw.index)), set())
     out["hba1c_percent"] = _numeric(raw, "LBXGH")

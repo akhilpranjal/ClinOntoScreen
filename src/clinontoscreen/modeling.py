@@ -298,54 +298,47 @@ def missing_input_stress_test(
 # Items scored on the official test; NHANES mappings are approximate.
 
 def cdc_ada_risk_score(frame: pd.DataFrame) -> pd.Series:
-    """Compute an approximate CDC/ADA prediabetes risk test score from NHANES canonical fields.
+    """Compute the CDC/ADA prediabetes risk test score from NHANES canonical fields.
 
-    The official paper questionnaire has 7 items.  We map as many as possible:
-      1. Age category (scored 0–3 pts)
-      2. Sex (Male=1, Female=0)
-      3. Gestational diabetes history — UNAVAILABLE in these NHANES files
-      4. Family history of diabetes — UNAVAILABLE (MCQ300A not in the selected file set)
-      5. High blood pressure (1 pt)
-      6. Physically active (0 if active, 1 if not)
-      7. BMI category (scored 0–3 pts)
+    Official scoring (CDC/ADA Prediabetes Risk Test, adapted from Bang et al., Ann Intern Med 2009):
+      1. Age category: <40 -> 0, 40-49 -> 1, 50-59 -> 2, >=60 -> 3 points
+      2. Sex: man -> 1 point, woman -> 0 points
+      3. Gestational diabetes history -> 1 point   (UNAVAILABLE in the harmonized NHANES files)
+      4. First-degree relative with diabetes -> 1 point (UNAVAILABLE: MCQ300C is absent from the
+         August 2021-August 2023 public MCQ file, so it cannot be harmonized across cycles)
+      5. Ever diagnosed with high blood pressure -> 1 point
+      6. Physically inactive -> 1 point (active -> 0 points)
+      7. BMI category: <25 (or <23 for Asian respondents) -> 0, 25-29 -> 1, 30-39 -> 2, >=40 -> 3 points
 
-    Items 3 and 4 are marked unavailable and scored as 0 (conservative).
-    This is documented as an incomplete external-score baseline.
+    Unavailable items are scored 0 and reported through CDC_ADA_UNAVAILABLE_ITEMS so the
+    baseline is never presented as a complete implementation of the published score.
     """
     age = pd.to_numeric(frame.get("age_years", pd.Series(dtype="float64")), errors="coerce")
     score = pd.Series(0.0, index=frame.index, dtype="float64")
 
-    # 1. Age category: <40 → 0, 40–49 → 1, 50–59 → 2, ≥60 → 3
+    # 1. Age category
     score += np.where(age >= 60, 3, np.where(age >= 50, 2, np.where(age >= 40, 1, 0)))
 
-    # 2. Sex: Male → 1
+    # 2. Sex: Male -> 1
     sex = pd.to_numeric(frame.get("sex_code", pd.Series(dtype="float64")), errors="coerce")
-    score += (sex == 1).astype(float)  # NHANES 1=Male
+    score += (sex == 1).astype(float)
 
-    # 3. Gestational diabetes: UNAVAILABLE — score 0
-    # 4. Family history: UNAVAILABLE — score 0
+    # 3. Gestational diabetes: UNAVAILABLE — scored 0
+    # 4. Family history: UNAVAILABLE in the later cycle — scored 0
 
     # 5. High blood pressure (ever told by a professional)
     bp_hist = pd.to_numeric(frame.get("hypertension_history", pd.Series(dtype="float64")), errors="coerce")
-    score += (bp_hist == 1).astype(float)  # NHANES 1=Yes
+    score += (bp_hist == 1).astype(float)
 
-    # 6. Physically active (any vigorous or moderate activity → 0; none → 1)
-    activity_cols = ["vigorous_work_activity", "moderate_work_activity",
-                     "vigorous_recreation_activity", "moderate_recreation_activity"]
-    activity_flags = []
-    for col in activity_cols:
-        if col in frame.columns:
-            vals = pd.to_numeric(frame[col], errors="coerce")
-            activity_flags.append(vals == 1)  # 1=Yes in NHANES
-    if activity_flags:
-        any_active = pd.concat(activity_flags, axis=1).any(axis=1)
-        score += (~any_active).astype(float)
-    else:
-        score += 1  # Conservatively assume inactive if data unavailable
+    # 6. Physically inactive (harmonized leisure-time activity minutes: 0 -> inactive point)
+    minutes = pd.to_numeric(frame.get("leisure_activity_minutes", pd.Series(dtype="float64")), errors="coerce")
+    score += (minutes.notna() & (minutes == 0)).astype(float)
 
-    # 7. BMI category: <25 → 0, 25–29.9 → 1, 30–39.9 → 2, ≥40 → 3
+    # 7. BMI category, with the official lower threshold for Asian respondents
     bmi = pd.to_numeric(frame.get("bmi", pd.Series(dtype="float64")), errors="coerce")
-    score += np.where(bmi >= 40, 3, np.where(bmi >= 30, 2, np.where(bmi >= 25, 1, 0)))
+    race = pd.to_numeric(frame.get("race_ethnicity_code", pd.Series(dtype="float64")), errors="coerce")
+    overweight_cut = np.where(race == 6, 23.0, 25.0)
+    score += np.where(bmi >= 40, 3, np.where(bmi >= 30, 2, np.where(bmi >= overweight_cut, 1, 0)))
 
     return score
 

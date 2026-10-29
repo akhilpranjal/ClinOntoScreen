@@ -9,8 +9,9 @@
 <https://w3id.org/clinontoscreen/ontology> a owl:Ontology ;
     dcterms:title "ClinOntoScreen diabetes screening knowledge model"@en ;
     dcterms:description "A bounded, auditable representation of selected clinical screening criteria for research on NHANES. This is not a complete clinical guideline or a diagnostic system."@en ;
-    owl:versionInfo "0.1.1" ;
+    owl:versionInfo "0.2.0" ;
     dcterms:created "2026-10-29"^^xsd:date ;
+    dcterms:modified "2026-10-30"^^xsd:date ;
     dcterms:source <https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes> .
 
 :Person a owl:Class ; rdfs:label "Person"@en .
@@ -45,6 +46,10 @@
 :diastolicThreshold a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:decimal .
 :categoryCodes a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:string .
 :implementationNote a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:string .
+:sectionReference a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Identifier of the guideline section a rule is taken from, stored so every encoded flag is traceable to source text."@en .
+:operationalizationStatus a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Whether, and how, a criterion could be operationalized from the harmonized NHANES public files."@en .
 :ruleOrder a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:integer .
 :nhanesVariable a owl:DatatypeProperty ; rdfs:domain :DataVariable ; rdfs:range xsd:string .
 :sourceURL a owl:DatatypeProperty ; rdfs:domain :GuidelineSource ; rdfs:range xsd:anyURI .
@@ -81,7 +86,9 @@
 
 :PhysicalInactivityRiskCriterion a :ScreeningCriterion ;
     rdfs:label "Physical inactivity risk factor"@en ;
-    rdfs:comment "Operationalized from selected NHANES work and recreational activity items when sufficient responses are available."@en .
+    :thresholdValue "0"^^xsd:decimal ; :thresholdUnit "minutes per week of harmonized leisure-time activity" ;
+    :operationalizationStatus "operationalized with cycle-harmonized leisure-time activity minutes: the yes/no work and recreation items (PAQ605/620/650/665) exist only in 2017–March 2020, so leisure-time moderate and vigorous activity minutes are used instead (PAD660+PAD675 with skip-pattern zeros in 2017–March 2020; PAD800+PAD820 with skip-pattern zeros in August 2021–August 2023)" ;
+    rdfs:comment "A person is recorded as inactive when harmonized leisure-time activity minutes are zero; when minutes are unknown the criterion is not assessable and is never treated as absent."@en .
 
 :HigherRiskEthnicityCriterion a :ScreeningCriterion ;
     rdfs:label "Higher-risk race, ethnicity, or ancestry factor in screening guidance"@en ;
@@ -95,6 +102,8 @@
     :usesCriterion :Age35Criterion ;
     :usesVariable :AgeVariable ;
     :hasSource :ADAStandards2026 ;
+    :sectionReference "ADA Standards of Care in Diabetes—2026, Chapter 2 (Diagnosis and Classification of Diabetes), screening recommendations for adults" ;
+    :operationalizationStatus "operationalized: RIDAGEYR is present in both cycles" ;
     :implementationNote "If age is known and >=35, mark screening eligibility. This is not a diagnosis and does not imply confirmed disease."@en .
 
 :YoungerAdultRiskBasedRule a :ScreeningRule ;
@@ -105,7 +114,24 @@
     :usesCriterion :BMIOverweightGeneralCriterion, :BMIOverweightAsianCriterion, :HypertensionRiskCriterion, :CVDHistoryRiskCriterion, :PhysicalInactivityRiskCriterion, :HigherRiskEthnicityCriterion ;
     :usesVariable :AgeVariable, :BMIVariable, :RaceEthnicityVariable, :SystolicBPVariable, :DiastolicBPVariable, :HypertensionHistoryVariable, :HypertensionTreatmentVariable, :CVDHistoryVariable, :PhysicalActivityVariable ;
     :hasSource :ADAStandards2026 ;
+    :sectionReference "ADA Standards of Care in Diabetes—2026, Chapter 2 (Diagnosis and Classification of Diabetes), screening recommendations for younger adults with overweight/obesity and additional risk factors" ;
+    :operationalizationStatus "partially operationalized: family history of diabetes, gestational diabetes and PCOS items are absent from one or both cycles; see :FamilyHistoryCriterion, :GestationalDiabetesCriterion and :PCOSCriterion" ;
     :implementationNote "This is a bounded operationalization of selected screening factors. Missing criteria are marked unknown; they are not treated as absent. The complete guideline contains other factors not represented here."@en .
+
+:FamilyHistoryCriterion a :ScreeningCriterion ;
+    rdfs:label "First-degree relative with diabetes"@en ;
+    :operationalizationStatus "not operationalized: MCQ300C (close relative had diabetes) is present in the 2017–March 2020 public MCQ file but is not included in the August 2021–August 2023 public MCQ file, so it cannot be harmonized across the temporal split" ;
+    rdfs:comment "Listed for completeness and traceability only. It is not evaluated by the rule executor and is not a model feature."@en .
+
+:GestationalDiabetesCriterion a :ScreeningCriterion ;
+    rdfs:label "History of gestational diabetes"@en ;
+    :operationalizationStatus "not operationalized: no gestational diabetes item is available in the selected NHANES public files" ;
+    rdfs:comment "Listed for completeness and traceability only. It is not evaluated by the rule executor and is not a model feature."@en .
+
+:PCOSCriterion a :ScreeningCriterion ;
+    rdfs:label "Polycystic ovary syndrome history"@en ;
+    :operationalizationStatus "not operationalized: no PCOS item is available in the selected NHANES public files" ;
+    rdfs:comment "Listed for completeness and traceability only. It is not evaluated by the rule executor and is not a model feature."@en .
 
 :AgeVariable a :DataVariable ; rdfs:label "Age in years"@en ; :nhanesVariable "RIDAGEYR" .
 :SexVariable a :DataVariable ; rdfs:label "NHANES sex/gender field (as coded in source)"@en ; :nhanesVariable "RIAGENDR" .
@@ -115,10 +141,15 @@
 :SystolicBPVariable a :DataVariable ; rdfs:label "Oscillometric systolic blood pressure reading"@en ; :nhanesVariable "BPXOSY1-BPXOSY4" .
 :DiastolicBPVariable a :DataVariable ; rdfs:label "Oscillometric diastolic blood pressure reading"@en ; :nhanesVariable "BPXODI1-BPXODI4" .
 :HypertensionHistoryVariable a :DataVariable ; rdfs:label "Ever told by a health professional that blood pressure was high"@en ; :nhanesVariable "BPQ020" .
-:HypertensionTreatmentVariable a :DataVariable ; rdfs:label "Currently taking prescribed medicine for hypertension"@en ; :nhanesVariable "BPQ040" .
+:HypertensionTreatmentVariable a :DataVariable ; rdfs:label "Currently taking prescribed medicine for hypertension"@en ; :nhanesVariable "BPQ040A" ;
+    :operationalizationStatus "cycle-asymmetric: BPQ040A exists in the 2017–March 2020 public BPQ file; the August 2021–August 2023 public BPQ file contains no hypertension-treatment item, so this column is unobserved in the later cycle and is treated as unknown, not as 'no'" .
 :CVDHistoryVariable a :DataVariable ; rdfs:label "Selected cardiovascular history questions"@en ; :nhanesVariable "MCQ160B-MCQ160F" .
-:PhysicalActivityVariable a :DataVariable ; rdfs:label "Selected physical activity questions"@en ; :nhanesVariable "PAQ605, PAQ620, PAQ650, PAQ665" .
+:PhysicalActivityVariable a :DataVariable ; rdfs:label "Harmonized leisure-time physical activity minutes and daily sedentary minutes"@en ;
+    :nhanesVariable "PAD660+PAD675 (2017–March 2020); PAD800+PAD820 (August 2021–August 2023); PAD680 sedentary minutes in both cycles" ;
+    :operationalizationStatus "harmonized: the PAQ605/620/650/665 yes/no items are not present in the August 2021–August 2023 public file and are excluded from the model schema" .
 :SmokingVariable a :DataVariable ; rdfs:label "Ever smoked at least 100 cigarettes"@en ; :nhanesVariable "SMQ020" .
+:FamilyHistoryVariable a :DataVariable ; rdfs:label "Close biological relative told they had diabetes"@en ; :nhanesVariable "MCQ300C" ;
+    :operationalizationStatus "not harmonized: present in the 2017–March 2020 public MCQ file, not included in the August 2021–August 2023 public MCQ file" .
 :EducationVariable a :DataVariable ; rdfs:label "Education level for adults"@en ; :nhanesVariable "DMDEDUC2" .
 :IncomeVariable a :DataVariable ; rdfs:label "Family income-to-poverty ratio"@en ; :nhanesVariable "INDFMPIR" .
 
@@ -127,6 +158,7 @@
     rdfs:comment "Among adults with valid HbA1c who report neither prior diabetes nor prior prediabetes, target=1 when LBXGH >=5.7%. This is a research label based on one survey measurement, not a confirmed clinical diagnosis."@en ;
     :thresholdValue "5.7"^^xsd:decimal ; :thresholdUnit "percent HbA1c" ;
     :usesVariable :HbA1cVariable ;
+    :sectionReference "ADA Standards of Care in Diabetes—2026, Chapter 2 (Diagnosis and Classification of Diabetes), diagnostic criteria for prediabetes" ;
     :hasSource :ADAStandards2026 .
 
 :DiabetesRangeSecondaryOutcome a :OutcomeDefinition ;
@@ -134,7 +166,13 @@
     rdfs:comment "Among the same eligible cohort, target=1 when LBXGH >=6.5%. A single measurement is not by itself a confirmed diagnosis."@en ;
     :thresholdValue "6.5"^^xsd:decimal ; :thresholdUnit "percent HbA1c" ;
     :usesVariable :HbA1cVariable ;
+    :sectionReference "ADA Standards of Care in Diabetes—2026, Chapter 2 (Diagnosis and Classification of Diabetes), diagnostic criteria for diabetes" ;
     :hasSource :ADAStandards2026 .
+
+:HDLCholesterolVariable a :DataVariable ;
+    rdfs:label "Direct high-density lipoprotein cholesterol measurement"@en ;
+    rdfs:comment "Non-glycemic laboratory predictor published for both cycles (HDL file). It is not part of the encoded screening rules."@en ;
+    :nhanesVariable "LBDHDD" .
 
 :HbA1cVariable a :DataVariable ;
     rdfs:label "NHANES glycohemoglobin (HbA1c) laboratory measurement"@en ;
