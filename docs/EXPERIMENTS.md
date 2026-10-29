@@ -34,7 +34,14 @@ is **exploratory** and is reported regardless of the direction of the result.
 ### EX-2 (addendum E2) — Missing-input stress test
 
 - At test time, mask waist circumference, mean systolic/diastolic blood pressure, hypertension history and the
-  four physical-activity items MCAR at rates 0%, 10% and 30% (three fixed seeds).
+  physical-activity inputs MCAR at rates 0%, 10% and 30% (three fixed seeds).
+  *Post-run disclosure (2026-10-30):* the register originally listed the four legacy yes/no activity
+  items (`PAQ605`/`PAQ620`/`PAQ650`/`PAQ665`), which were dropped during cycle harmonization. The
+  executed run therefore masked `waist_cm`, `systolic_bp_mean`, `diastolic_bp_mean` and
+  `hypertension_history` only (the runner skips mask columns absent from the frame).
+  `MASK_COLUMNS` was corrected to the harmonized inputs (`leisure_activity_minutes`,
+  `sedentary_minutes`) post-run so a future rerun matches the intent; recorded artifacts are
+  unchanged. See `docs/DECISIONS.md`.
 - Ontology features are **re-derived from the masked inputs**, so the rule layer never reads information the ML
   system does not receive. The executor reports the fraction of participants with at least one criterion that is
   *not assessable* instead of guessing.

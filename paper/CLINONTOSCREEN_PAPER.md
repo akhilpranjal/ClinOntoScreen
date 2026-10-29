@@ -196,8 +196,9 @@ AUPRC/AUROC differences; smallest detectable difference (MDE = 1.96 · SE from h
 computed before test access): **0.0143** (hybrid), **0.0146** (LR), **0.0179** (XGB).
 
 **Confirmatory vs exploratory.** Only H2 (hybrid vs XGB-only sensitivity @20%) is confirmatory.
-E1 (training fractions 5–100%, 3 subsamples each), E2 (MCAR masking 10%/30% of waist, BP,
-hypertension history, activity items; ontology features re-derived from masked inputs), E3 (model
+E1 (training fractions 5–100%, 3 subsamples each), E2 (MCAR masking 10%/30% of waist, systolic/
+diastolic BP and hypertension history; ontology features re-derived from masked inputs — see §6.7
+for the executed mask set), E3 (model
 family), H3 (top-k disagreement vs size-matched confidence-only review), subgroups, and the
 ethnicity-flag ablation are exploratory and labelled as such.
 
@@ -308,6 +309,12 @@ The hybrid policy keeps the highest AUPRC at every masking rate; the linear mode
 stable at capacity. The rule layer never saw information the ML system lacked: ontology features were
 re-derived from the masked inputs and reported `not-assessable` rather than imputing rules. The
 not-assessable fraction stayed at 0.004 because masked items are risk factors, not eligibility inputs.
+**Executed mask set (disclosure):** `waist_cm`, `systolic_bp_mean`, `diastolic_bp_mean` and
+`hypertension_history`. The experiment register had also listed the four legacy yes/no
+physical-activity items; those items were dropped during cycle harmonization (100% missing in
+2021–2023), and the runner masks only mask-list columns that exist, so the activity inputs were not
+masked in this run. The mask list was corrected post-run for future reruns only; no recorded number
+changes (`docs/DECISIONS.md`).
 Figure: `artifacts/e2_missing_input.png`.
 
 ### 6.8 H3 — guideline disagreement vs size-matched confidence review (exploratory)

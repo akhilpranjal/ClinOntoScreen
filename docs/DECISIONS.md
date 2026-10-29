@@ -173,7 +173,22 @@ pandas 2.3.0, scikit-learn 1.6.1, xgboost 3.2.0, rdflib 7.6.0. Cohort matches th
   family history) are unavailable in NHANES and score 0 for every participant — disclosed as a
   mapping limitation, not as a property of the published test.
 
-**Divergences from the plan:** none in analysis. The exploratory review-related figures use the
+**Divergences from the plan:** one, disclosed as item 4 below. Otherwise none in analysis. The
+exploratory review-related figures use the
 prespecified symmetric-difference definition; the older `review_analysis` formulation from the
 pre-addendum run is superseded (that run is preserved, unmodified, in `artifacts_colab_2026-10-29/`
 with a note that it predates the addendum feature harmonization and experiments).
+
+**4. `2026-10-30` — E2 executed mask set (prespec text vs executed code).** Post-run review found that
+`docs/EXPERIMENTS.md` still listed the four legacy yes/no activity items (`PAQ605`/`PAQ620`/
+`PAQ650`/`PAQ665`) for E2 masking, but those columns were dropped during cycle harmonization
+(100% missing in 2021–2023). The runner masks only mask-list columns present in the frame
+(`if col in masked_raw.columns`), so the executed E2 masked exactly four inputs: `waist_cm`,
+`systolic_bp_mean`, `diastolic_bp_mean`, `hypertension_history`. Recorded E2 numbers in
+`artifacts/` are therefore from that mask set and are **unchanged**. Fixes (reporting/consistency
+only, no rerun): `MASK_COLUMNS` in `cell01` corrected to the harmonized inputs
+(`leisure_activity_minutes`, `sedentary_minutes`) for future reruns; `EXPERIMENTS.md` and the paper
+(§5 and §6.7) now state the executed mask set explicitly; `tests/test_ontology.py` inputs migrated
+from the dropped legacy activity columns to `leisure_activity_minutes` (one extra test added for the
+unassessable path). Note that a future rerun would produce slightly different E2 rows for the
+activity-masking conditions; the committed artifacts are from the original run.

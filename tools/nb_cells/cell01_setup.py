@@ -46,9 +46,12 @@ LOW_DATA_FRACTIONS = [0.05, 0.10, 0.25, 0.50, 1.0]
 LOW_DATA_REPEATS = 3
 MASK_RATES = [0.0, 0.10, 0.30]
 MASK_REPEATS = 3
+# Mask list uses the cycle-harmonized inputs. The four legacy yes/no activity items from the
+# original register were dropped in harmonization (100% missing in 2021-2023), so the executed
+# 2026-10-30 run masked only waist/BP/hypertension history (see docs/DECISIONS.md); this list is
+# corrected for future reruns.
 MASK_COLUMNS = ['waist_cm', 'systolic_bp_mean', 'diastolic_bp_mean', 'hypertension_history',
-                'vigorous_work_activity', 'moderate_work_activity',
-                'vigorous_recreation_activity', 'moderate_recreation_activity']
+                'leisure_activity_minutes', 'sedentary_minutes']
 
 def git_info():
     try:
