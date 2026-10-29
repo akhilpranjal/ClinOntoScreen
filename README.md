@@ -98,6 +98,8 @@ The ontology graph and rule explanation view can run before model training. Afte
 python -m pytest -q
 ```
 
+The test suite checks the data/leakage contract, ontology rules and graph, artifact serialization, and notebook/ontology consistency. The notebook is intentionally committed without execution outputs so no one mistakes placeholder values for results.
+
 ## Research integrity
 
 - The final temporal test data are never used for model selection, rule-weight tuning or threshold selection.

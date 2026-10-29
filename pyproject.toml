@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clinontoscreen"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ontology-guided NHANES screening prioritization research prototype"
 requires-python = ">=3.10"
 license = {text = "MIT"}

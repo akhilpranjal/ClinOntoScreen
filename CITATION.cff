@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software in academic work, cite the repository and the final paper when available. Update the author and repository fields before publishing."
 title: "ClinOntoScreen: Ontology-Guided Screening Prioritization for NHANES"
 type: software
-version: 0.1.0
+version: 0.1.1
 date-released: 2026-10-29
 authors:
   - family-names: "AUTHOR_NAME_TO_UPDATE"
