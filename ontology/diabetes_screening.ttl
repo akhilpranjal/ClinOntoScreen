@@ -1,0 +1,145 @@
+@prefix : <https://w3id.org/clinontoscreen/ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix loinc: <https://loinc.org/> .
+
+<https://w3id.org/clinontoscreen/ontology> a owl:Ontology ;
+    dcterms:title "ClinOntoScreen diabetes screening knowledge model"@en ;
+    dcterms:description "A bounded, auditable representation of selected clinical screening criteria for research on NHANES. This is not a complete clinical guideline or a diagnostic system."@en ;
+    owl:versionInfo "0.1.1" ;
+    dcterms:created "2026-10-29"^^xsd:date ;
+    dcterms:source <https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes> .
+
+:Person a owl:Class ; rdfs:label "Person"@en .
+:ClinicalMeasurement a owl:Class ; rdfs:label "Clinical measurement"@en .
+:RiskFactor a owl:Class ; rdfs:label "Risk factor"@en .
+:ScreeningCriterion a owl:Class ; rdfs:label "Screening criterion"@en .
+:ScreeningRule a owl:Class ; rdfs:label "Screening rule"@en .
+:ScreeningAssessment a owl:Class ; rdfs:label "Screening assessment"@en .
+:OutcomeDefinition a owl:Class ; rdfs:label "Research outcome definition"@en ;
+    rdfs:comment "Outcome definitions are used only for evaluation and must not become predictors or screening rules."@en .
+:DataVariable a owl:Class ; rdfs:label "Dataset variable"@en .
+:GuidelineSource a owl:Class ; rdfs:label "Guideline source"@en .
+
+:hasMeasurement a owl:ObjectProperty ; rdfs:domain :Person ; rdfs:range :ClinicalMeasurement .
+:hasRiskFactor a owl:ObjectProperty ; rdfs:domain :Person ; rdfs:range :RiskFactor .
+:usesCriterion a owl:ObjectProperty ; rdfs:domain :ScreeningRule ; rdfs:range :ScreeningCriterion .
+:usesVariable a owl:ObjectProperty ; rdfs:domain :ScreeningRule ; rdfs:range :DataVariable .
+:derivedFrom a owl:ObjectProperty ; rdfs:domain :DataVariable ; rdfs:range :DataVariable .
+:hasSource a owl:ObjectProperty ; rdfs:range :GuidelineSource .
+:producesAssessment a owl:ObjectProperty ; rdfs:domain :ScreeningRule ; rdfs:range :ScreeningAssessment .
+:meetsCriterion a owl:ObjectProperty ; rdfs:domain :ScreeningAssessment ; rdfs:range :ScreeningCriterion .
+
+:ageYears a owl:DatatypeProperty ; rdfs:domain :Person ; rdfs:range xsd:integer .
+:bmi a owl:DatatypeProperty ; rdfs:domain :Person ; rdfs:range xsd:decimal .
+:systolicBloodPressure a owl:DatatypeProperty ; rdfs:domain :Person ; rdfs:range xsd:decimal .
+:diastolicBloodPressure a owl:DatatypeProperty ; rdfs:domain :Person ; rdfs:range xsd:decimal .
+:ruleExpression a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:string .
+:thresholdValue a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:decimal .
+:thresholdUnit a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:string .
+:requiresRiskFactorCount a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:integer .
+:systolicThreshold a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:decimal .
+:diastolicThreshold a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:decimal .
+:categoryCodes a owl:DatatypeProperty ; rdfs:domain :ScreeningCriterion ; rdfs:range xsd:string .
+:implementationNote a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:string .
+:ruleOrder a owl:DatatypeProperty ; rdfs:domain :ScreeningRule ; rdfs:range xsd:integer .
+:nhanesVariable a owl:DatatypeProperty ; rdfs:domain :DataVariable ; rdfs:range xsd:string .
+:sourceURL a owl:DatatypeProperty ; rdfs:domain :GuidelineSource ; rdfs:range xsd:anyURI .
+
+:ADAStandards2026 a :GuidelineSource ;
+    rdfs:label "American Diabetes Association Standards of Care in Diabetes—2026"@en ;
+    :sourceURL "https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes"^^xsd:anyURI ;
+    rdfs:comment "Selected screening recommendations are operationalized only where the required NHANES variables are available. Refer to the source document for the full recommendation."@en .
+
+:Age35Criterion a :ScreeningCriterion ;
+    rdfs:label "Adult age-based screening criterion"@en ;
+    rdfs:comment "ADA guidance recommends screening adults beginning at age 35. This project encodes this as a screening eligibility criterion, not as a diagnosis."@en ;
+    :thresholdValue "35"^^xsd:decimal ; :thresholdUnit "years" .
+
+:BMIOverweightGeneralCriterion a :ScreeningCriterion ;
+    rdfs:label "BMI threshold for overweight in general screening criteria"@en ;
+    :thresholdValue "25"^^xsd:decimal ; :thresholdUnit "kg/m2" ;
+    rdfs:comment "The selected ADA screening recommendation uses BMI >=25 kg/m2 for adults with overweight or obesity, subject to additional risk criteria when younger than the age-based screening threshold."@en .
+
+:BMIOverweightAsianCriterion a :ScreeningCriterion ;
+    rdfs:label "BMI threshold used for Asian ancestry in screening criteria"@en ;
+    :thresholdValue "23"^^xsd:decimal ; :thresholdUnit "kg/m2" ;
+    rdfs:comment "The selected ADA screening recommendation uses BMI >=23 kg/m2 for individuals of Asian ancestry. NHANES categories are an imperfect proxy for ancestry; this is a documented limitation and must be ablated in evaluation."@en .
+
+:HypertensionRiskCriterion a :ScreeningCriterion ;
+    rdfs:label "Hypertension risk factor"@en ;
+    :systolicThreshold "130"^^xsd:decimal ;
+    :diastolicThreshold "80"^^xsd:decimal ;
+    rdfs:comment "Operationalized from measured blood pressure, self-reported hypertension history, or prescribed hypertension treatment when available in NHANES."@en .
+
+:CVDHistoryRiskCriterion a :ScreeningCriterion ;
+    rdfs:label "Cardiovascular disease history risk factor"@en ;
+    rdfs:comment "Operationalized from selected self-reported cardiovascular history items. It is not a comprehensive cardiovascular history."@en .
+
+:PhysicalInactivityRiskCriterion a :ScreeningCriterion ;
+    rdfs:label "Physical inactivity risk factor"@en ;
+    rdfs:comment "Operationalized from selected NHANES work and recreational activity items when sufficient responses are available."@en .
+
+:HigherRiskEthnicityCriterion a :ScreeningCriterion ;
+    rdfs:label "Higher-risk race, ethnicity, or ancestry factor in screening guidance"@en ;
+    :categoryCodes "1,2,4,6" ;
+    rdfs:comment "Encodes only an approximate grouping supported by available NHANES categories. This is included as a guideline criterion for a sensitivity analysis, not interpreted as biological causation. The primary paper must discuss fairness and show an ablation without this feature."@en .
+
+:AgeBasedScreeningRule a :ScreeningRule ;
+    rdfs:label "Age-based screening rule"@en ;
+    :ruleOrder 1 ;
+    :ruleExpression "age_years >= 35" ;
+    :usesCriterion :Age35Criterion ;
+    :usesVariable :AgeVariable ;
+    :hasSource :ADAStandards2026 ;
+    :implementationNote "If age is known and >=35, mark screening eligibility. This is not a diagnosis and does not imply confirmed disease."@en .
+
+:YoungerAdultRiskBasedRule a :ScreeningRule ;
+    rdfs:label "Younger-adult BMI plus additional risk-factor rule"@en ;
+    :ruleOrder 2 ;
+    :ruleExpression "age_years < 35 AND bmi_meets_ancestry_threshold AND at_least_one_observed_additional_risk_factor" ;
+    :requiresRiskFactorCount 1 ;
+    :usesCriterion :BMIOverweightGeneralCriterion, :BMIOverweightAsianCriterion, :HypertensionRiskCriterion, :CVDHistoryRiskCriterion, :PhysicalInactivityRiskCriterion, :HigherRiskEthnicityCriterion ;
+    :usesVariable :AgeVariable, :BMIVariable, :RaceEthnicityVariable, :SystolicBPVariable, :DiastolicBPVariable, :HypertensionHistoryVariable, :HypertensionTreatmentVariable, :CVDHistoryVariable, :PhysicalActivityVariable ;
+    :hasSource :ADAStandards2026 ;
+    :implementationNote "This is a bounded operationalization of selected screening factors. Missing criteria are marked unknown; they are not treated as absent. The complete guideline contains other factors not represented here."@en .
+
+:AgeVariable a :DataVariable ; rdfs:label "Age in years"@en ; :nhanesVariable "RIDAGEYR" .
+:SexVariable a :DataVariable ; rdfs:label "NHANES sex/gender field (as coded in source)"@en ; :nhanesVariable "RIAGENDR" .
+:RaceEthnicityVariable a :DataVariable ; rdfs:label "NHANES race/Hispanic origin including non-Hispanic Asian category"@en ; :nhanesVariable "RIDRETH3" .
+:BMIVariable a :DataVariable ; rdfs:label "Body mass index"@en ; :nhanesVariable "BMXBMI" .
+:WaistVariable a :DataVariable ; rdfs:label "Waist circumference"@en ; :nhanesVariable "BMXWAIST" .
+:SystolicBPVariable a :DataVariable ; rdfs:label "Oscillometric systolic blood pressure reading"@en ; :nhanesVariable "BPXOSY1-BPXOSY4" .
+:DiastolicBPVariable a :DataVariable ; rdfs:label "Oscillometric diastolic blood pressure reading"@en ; :nhanesVariable "BPXODI1-BPXODI4" .
+:HypertensionHistoryVariable a :DataVariable ; rdfs:label "Ever told by a health professional that blood pressure was high"@en ; :nhanesVariable "BPQ020" .
+:HypertensionTreatmentVariable a :DataVariable ; rdfs:label "Currently taking prescribed medicine for hypertension"@en ; :nhanesVariable "BPQ040" .
+:CVDHistoryVariable a :DataVariable ; rdfs:label "Selected cardiovascular history questions"@en ; :nhanesVariable "MCQ160B-MCQ160F" .
+:PhysicalActivityVariable a :DataVariable ; rdfs:label "Selected physical activity questions"@en ; :nhanesVariable "PAQ605, PAQ620, PAQ650, PAQ665" .
+:SmokingVariable a :DataVariable ; rdfs:label "Ever smoked at least 100 cigarettes"@en ; :nhanesVariable "SMQ020" .
+:EducationVariable a :DataVariable ; rdfs:label "Education level for adults"@en ; :nhanesVariable "DMDEDUC2" .
+:IncomeVariable a :DataVariable ; rdfs:label "Family income-to-poverty ratio"@en ; :nhanesVariable "INDFMPIR" .
+
+:HbA1cTargetDefinition a :OutcomeDefinition ;
+    rdfs:label "Research outcome: HbA1c-defined screen-positive dysglycemia"@en ;
+    rdfs:comment "Among adults with valid HbA1c who report neither prior diabetes nor prior prediabetes, target=1 when LBXGH >=5.7%. This is a research label based on one survey measurement, not a confirmed clinical diagnosis."@en ;
+    :thresholdValue "5.7"^^xsd:decimal ; :thresholdUnit "percent HbA1c" ;
+    :usesVariable :HbA1cVariable ;
+    :hasSource :ADAStandards2026 .
+
+:DiabetesRangeSecondaryOutcome a :OutcomeDefinition ;
+    rdfs:label "Secondary outcome: single HbA1c measurement in diabetes range"@en ;
+    rdfs:comment "Among the same eligible cohort, target=1 when LBXGH >=6.5%. A single measurement is not by itself a confirmed diagnosis."@en ;
+    :thresholdValue "6.5"^^xsd:decimal ; :thresholdUnit "percent HbA1c" ;
+    :usesVariable :HbA1cVariable ;
+    :hasSource :ADAStandards2026 .
+
+:HbA1cVariable a :DataVariable ;
+    rdfs:label "NHANES glycohemoglobin (HbA1c) laboratory measurement"@en ;
+    :nhanesVariable "LBXGH" ;
+    rdfs:comment "Outcome-only variable. Strictly prohibited from the ML feature matrix."@en ;
+    :derivedFrom loinc:4548-4 .
+
+loinc:4548-4 rdfs:label "Hemoglobin A1c/Hemoglobin.total in Blood"@en .
