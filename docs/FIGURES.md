@@ -14,4 +14,4 @@ Every empirical figure must be generated from saved artifacts by the notebook. N
 | Table 1 | Cohort and missingness summary | `research_results.json` | Describe test cohort without overclaiming representativeness |
 | Table 2 | Main ML metrics | `research_results.json` | Discrimination and calibration |
 | Table 3 | Fixed-capacity metrics | `research_results.json` | Cases found, sensitivity, precision and referrals |
-| Table 4 | Ablation and subgroup analysis | `research_results.json` | Attribute benefits/harms and show limitations |
+| Table 4 | Ablation and subgroup analysis | `research_results.json` | Compare the full rule with the higher-risk ethnicity-flag ablation; state that this is not a fully race-blind model |

@@ -19,3 +19,7 @@
 - **Decision:** Include raw ML, ontology features, an equivalent generic-feature control, ontology-only ranking, and confidence-only review.
   - **Reason:** Separate ontology traceability from generic feature engineering and test the added value of disagreement.
 - **Decision:** Do not claim results or clinical validity until the full notebook completes and the evidence is assessed.
+
+- **Decision:** Run a prespecified higher-risk race/ethnicity rule-flag ablation.
+  - **Reason:** Check how much the particular encoded risk-factor flag contributes to the hybrid screening policy.
+  - **Caveat:** This is not a full race-blind analysis because race/ethnicity remains a raw model feature and the Asian-specific BMI threshold remains encoded.

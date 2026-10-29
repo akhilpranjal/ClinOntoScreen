@@ -42,10 +42,12 @@ This document defines the final experiment suite. It is not a pilot gate; all co
 - Report historical validation and later-cycle test metrics.
 - Do not attribute shifts to COVID-19 or a particular cause.
 
-## E7: Sensitivity and subgroup analysis
+## E7: Higher-risk race/ethnicity rule-flag ablation and subgroup analysis
 
-- Primary rule model with and without the higher-risk race/ethnicity criterion.
-- Secondary HbA1c threshold of >=6.5%, clearly labelled as a single-measurement diabetes-range result.
+- Re-run the ontology-feature XGBoost model and fixed-capacity policy after excluding the higher-risk race/ethnicity *risk-factor flag* from the ontology's additional-risk count and priority-score denominator.
+- This is not a fully race-blind analysis: raw race/ethnicity remains a model predictor and the Asian-specific BMI threshold remains in the encoded screening rule. State this clearly in every interpretation.
+- The notebook reports the primary 20%-capacity sensitivity difference with and without the flag, and includes both policies at 10%, 20% and 30% capacity.
+- Report the count of participants with the secondary HbA1c threshold >=6.5%, clearly labelled as a single-measurement diabetes-range result. Fit/evaluate a separate secondary-outcome model only if event counts support stable evaluation; do not pretend a model trained for >=5.7% has been evaluated as though it were trained for >=6.5%.
 - Subgroup summaries only where sample size supports a meaningful estimate; always show counts and uncertainty.
 
 ## Automated integrity checks

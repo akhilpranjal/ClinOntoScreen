@@ -65,3 +65,20 @@ def test_hypertension_treatment_counts_as_risk_factor():
     out = derive_ontology_features(df)
     assert out.loc[0, "onto_hypertension_risk"] == 1.0
     assert out.loc[0, "onto_screening_eligible"] == 1.0
+
+
+def test_higher_risk_ethnicity_criterion_can_be_ablated():
+    df = pd.DataFrame([{
+        "age_years": 28, "race_ethnicity_code": 1, "bmi": 29,
+        "systolic_bp_mean": 110, "diastolic_bp_mean": 70,
+        "hypertension_history": 2, "hypertension_treatment": 2,
+        "heart_failure_history": 2, "coronary_heart_disease_history": 2,
+        "angina_history": 2, "heart_attack_history": 2, "stroke_history": 2,
+        "vigorous_work_activity": 1, "moderate_work_activity": 2,
+        "vigorous_recreation_activity": 2, "moderate_recreation_activity": 2,
+    }])
+    full = derive_ontology_features(df, include_ethnicity=True).iloc[0]
+    ablated = derive_ontology_features(df, include_ethnicity=False).iloc[0]
+    assert full["onto_higher_risk_ethnicity"] == 1.0
+    assert ablated["onto_higher_risk_ethnicity"] == 0.0
+    assert full["onto_additional_risk_factor_count"] == ablated["onto_additional_risk_factor_count"] + 1

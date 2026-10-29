@@ -51,3 +51,5 @@ def test_notebook_declares_a_predictor_leakage_contract():
     assert "DIQ160" in source
     assert "yes_no_flag(out,'hypertension_treatment')" in source
     assert "yn('hypertension_treatment')" in source
+    assert "include_ethnicity=False" in source
+    assert "race_ethnicity_ablation" in source

@@ -15,6 +15,7 @@ All notable project changes are documented here. This initial scaffold contains 
 - Added regression tests for graph edges and treatment-based risk flags.
 - Updated the standalone Kaggle/Colab notebook's embedded ontology to match the repository ontology.
 - Kept the independent manual-feature control aligned with the hypertension-treatment criterion and added a static regression guard.
-- Smoke-tested the full notebook training/evaluation/artifact flow using temporary synthetic data only; no synthetic metrics were retained as project results.
+- Smoke-tested the notebook training/evaluation/artifact flow using temporary synthetic data only; no synthetic metrics were retained as project results.
+- Added the prespecified higher-risk race/ethnicity rule-flag ablation to the notebook, result artifacts, dashboard and experiment register, with explicit interpretation limits.
 - Added static integrity tests for notebook syntax, empty outputs, ontology embedding parity and predictor leakage-contract presence.
 - Added a project architecture diagram and made dashboard artifact-copy instructions explicit.

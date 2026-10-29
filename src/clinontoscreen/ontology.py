@@ -93,7 +93,7 @@ def _any_flag(flags: list[pd.Series], index: pd.Index) -> pd.Series:
     return out
 
 
-def derive_ontology_features(frame: pd.DataFrame) -> pd.DataFrame:
+def derive_ontology_features(frame: pd.DataFrame, include_ethnicity: bool = True) -> pd.DataFrame:
     """Derive rule features from canonical non-glycemic inputs. No outcome columns are read."""
     out = frame.copy()
     cfg = get_rule_config()
@@ -130,9 +130,17 @@ def derive_ontology_features(frame: pd.DataFrame) -> pd.DataFrame:
     inactivity.loc[all_no] = 1.0
 
     ethnicity = pd.Series(np.nan, index=out.index, dtype="float64")
-    ethnicity.loc[race.notna()] = race.loc[race.notna()].isin(cfg["higher_risk_ethnicity_codes"]).astype(float)
+    if include_ethnicity:
+        ethnicity.loc[race.notna()] = race.loc[race.notna()].isin(cfg["higher_risk_ethnicity_codes"]).astype(float)
+    else:
+        # Constant sentinel for the model feature schema; the criterion is excluded from
+        # eligibility, additional-risk counts, and the priority denominator in this ablation.
+        ethnicity = pd.Series(0.0, index=out.index, dtype="float64")
 
-    risk_flags = pd.concat([hypertension, cvd, inactivity, ethnicity], axis=1)
+    risk_columns = [hypertension, cvd, inactivity]
+    if include_ethnicity:
+        risk_columns.append(ethnicity)
+    risk_flags = pd.concat(risk_columns, axis=1)
     risk_count = risk_flags.fillna(0).sum(axis=1).astype(float)
     known_count = risk_flags.notna().sum(axis=1)
     risk_count.loc[known_count == 0] = np.nan
@@ -148,7 +156,10 @@ def derive_ontology_features(frame: pd.DataFrame) -> pd.DataFrame:
     eligible.loc[younger_bmi_yes & has_risk] = 1.0
     eligible.loc[younger_bmi_yes & risk_count.eq(0)] = 0.0
 
-    criteria = pd.concat([age_flag, bmi_flag, hypertension, cvd, inactivity, ethnicity], axis=1)
+    criteria_columns = [age_flag, bmi_flag, hypertension, cvd, inactivity]
+    if include_ethnicity:
+        criteria_columns.append(ethnicity)
+    criteria = pd.concat(criteria_columns, axis=1)
     criteria_observed = criteria.notna().sum(axis=1).astype(float)
     criteria_missing = criteria.isna().sum(axis=1).astype(float)
     # This is a study-defined ordinal score for ranking, not a calibrated clinical risk probability.

@@ -146,6 +146,15 @@ def render_results(results):
             st.success("The interval is above zero for this run. Interpret the magnitude, assumptions, and limitations before claiming a research contribution.")
         elif high is not None and high < 0:
             st.warning("The estimated hybrid effect is below zero for this run. Report the negative result honestly.")
+    ablation = results.get("race_ethnicity_ablation", {})
+    ablation_effect = ablation.get("primary_effect_without_higher_risk_ethnicity_flag", {})
+    if ablation_effect:
+        st.markdown("### Sensitivity check: remove the higher-risk race/ethnicity rule flag")
+        ab_cols = st.columns(3)
+        ab_cols[0].metric("Full-rule hybrid sensitivity @20%", fmt_num(effect.get("hybrid_sensitivity"), 3))
+        ab_cols[1].metric("Ablated hybrid sensitivity @20%", fmt_num(ablation_effect.get("hybrid_sensitivity"), 3))
+        ab_cols[2].metric("Ablated hybrid minus ML", fmt_num(ablation_effect.get("difference"), 3))
+        st.caption(ablation.get("interpretation", "Interpret this ablation within the limits of the encoded rules."))
     st.markdown("### Diagnostic plots from the notebook run")
     figure_names = ["roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png"]
     present = [(name, ARTIFACT_DIR / name) for name in figure_names if (ARTIFACT_DIR / name).exists()]
