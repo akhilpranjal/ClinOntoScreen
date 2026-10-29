@@ -26,3 +26,6 @@ artifacts/*
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
+
+# Notebook runtime output
+clinontoscreen_run/
