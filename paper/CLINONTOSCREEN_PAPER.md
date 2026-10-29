@@ -105,16 +105,16 @@ capacity reporting makes the achievable operating point explicit.
 
 ### Capability comparison with the three closest papers
 
-| Dimension | Pham & Soo 2026 (CEAI) | Kumar 2026 (CMPB, Zenodo) | CardioMeta 2026 (arXiv) | **ClinOntoScreen (this work)** |
-|---|---|---|---|---|
-| Data | Pima, 130-US-Hospitals, NHANES | NHANES 2005–2016 dev, 2017–2020 + 2021–2023 holdouts | NHANES dev + 2017–2020 temporal; MIMIC-IV transfer | NHANES 2017–Mar 2020 dev; **2021–2023 locked temporal test** |
-| Target | Diabetes status (lab-inclusive) | HbA1c ≥ 6.5%, no diagnosed diabetes | Multi-task cardiometabolic status | HbA1c ≥ 5.7% in adults reporting no diabetes/prediabetes |
-| Ontology / knowledge role | Domain ontology + clustering for semantics/interpretability | None | None | OWL/RDF rules with guideline-section provenance; features, ranking and policy |
-| Leakage control | Not reported | Central (leakage-controlled) | Central (leakage-reduced heads) | Forbidden-predictor contract + pipeline-internal transforms + CI test |
-| Baselines | Conventional ML/clustering | ADA risk score, survey-weighted GLM, boosting, ensembles | Strong GBDT/neural tabular baselines | LR/XGBoost raw, generic-feature control, rule-only, hybrid, **CDC/ADA published score** |
-| Primary metric | Accuracy/AUROC | Discrimination + calibration + decision curves | Macro-AUROC/AUPRC + calibration | **Sensitivity @ fixed capacity with prevalence ceiling**, paired bootstrap CI |
-| Missing-input / low-data probes | No | Ablations (unweighted, random split) | Domain-shift transfer | E2 masked inputs (rules report not-assessable), E1 learning curve |
-| Limitation vs. us | Random split; lab-inclusive; no temporal test | No knowledge layer | No guideline content; different target | NHANES only; survey weights not used; cross-sectional outcome |
+| Dimension                       | Pham & Soo 2026 (CEAI)                                      | Kumar 2026 (CMPB, Zenodo)                                | CardioMeta 2026 (arXiv)                             | **ClinOntoScreen (this work)**                                                          |
+| ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Data                            | Pima, 130-US-Hospitals, NHANES                              | NHANES 2005–2016 dev, 2017–2020 + 2021–2023 holdouts  | NHANES dev + 2017–2020 temporal; MIMIC-IV transfer | NHANES 2017–Mar 2020 dev; **2021–2023 locked temporal test**                          |
+| Target                          | Diabetes status (lab-inclusive)                             | HbA1c ≥ 6.5%, no diagnosed diabetes                     | Multi-task cardiometabolic status                   | HbA1c ≥ 5.7% in adults reporting no diabetes/prediabetes                                     |
+| Ontology / knowledge role       | Domain ontology + clustering for semantics/interpretability | None                                                     | None                                                | OWL/RDF rules with guideline-section provenance; features, ranking and policy                 |
+| Leakage control                 | Not reported                                                | Central (leakage-controlled)                             | Central (leakage-reduced heads)                     | Forbidden-predictor contract + pipeline-internal transforms + CI test                         |
+| Baselines                       | Conventional ML/clustering                                  | ADA risk score, survey-weighted GLM, boosting, ensembles | Strong GBDT/neural tabular baselines                | LR/XGBoost raw, generic-feature control, rule-only, hybrid, **CDC/ADA published score** |
+| Primary metric                  | Accuracy/AUROC                                              | Discrimination + calibration + decision curves           | Macro-AUROC/AUPRC + calibration                     | **Sensitivity @ fixed capacity with prevalence ceiling**, paired bootstrap CI           |
+| Missing-input / low-data probes | No                                                          | Ablations (unweighted, random split)                     | Domain-shift transfer                               | E2 masked inputs (rules report not-assessable), E1 learning curve                             |
+| Limitation vs. us               | Random split; lab-inclusive; no temporal test               | No knowledge layer                                       | No guideline content; different target              | NHANES only; survey weights not used; cross-sectional outcome                                 |
 
 ## 3. Data
 
@@ -124,12 +124,12 @@ NHANES 2017–March 2020 pre-pandemic and August 2021–August 2023, downloaded 
 
 **Cohort flow (from `artifacts/data_qc.json`).**
 
-| Step | Historical (2017–Mar 2020) | Temporal test (2021–2023) |
-|---|---|---|
-| Rows in DEMO file | 15,560 (merged panel) | 11,933 (merged panel) |
-| Adults 18+ → no reported diabetes → no reported prediabetes → valid HbA1c | 6,103 | 4,260 |
-| Screen-positive (HbA1c ≥ 5.7%) | 1,766 (28.94%) | 983 (23.08%) |
-| Secondary: HbA1c ≥ 6.5% in test cohort | — | 67 |
+| Step                                                                         | Historical (2017–Mar 2020) | Temporal test (2021–2023) |
+| ---------------------------------------------------------------------------- | --------------------------- | -------------------------- |
+| Rows in DEMO file                                                            | 15,560 (merged panel)       | 11,933 (merged panel)      |
+| Adults 18+ → no reported diabetes → no reported prediabetes → valid HbA1c | 6,103                       | 4,260                      |
+| Screen-positive (HbA1c ≥ 5.7%)                                              | 1,766 (28.94%)              | 983 (23.08%)               |
+| Secondary: HbA1c ≥ 6.5% in test cohort                                      | —                          | 67                         |
 
 **Composition (Table: `artifacts/cohort_composition.csv`).** Test cycle is older (mean age 49.2 vs
 46.1; 36.7% vs 27.5% aged 60+) and less non-Hispanic Black (11.1% vs 24.7%) and non-Hispanic Asian
@@ -142,7 +142,7 @@ they are harmonized into `leisure_activity_minutes` (skip-pattern zeros honored,
 masked) and `sedentary_minutes` (PAD680, both cycles). `HDL` (LBDHDD) is available in both cycles and
 is included. Not harmonized (excluded from the schema and disclosed): `BPQ040A` hypertension-treatment
 item and `MCQ300C` family history exist only in the earlier cycle; cycle-specific weight columns
-(`WTMEC2YR`/`WTMECPRP`); a fourth BP reading. **Consequence: `hypertension_treatment` is 100% missing
+(`WTMEC2YR`/`WTMECPRP`); a fourth BP reading. **Consequence: `hypertension_treatment` is 100% missingP
 in the test cohort** (verified in `data_qc.json`); other missingness is small (income-to-poverty ratio
 12.5%, CVD history items ≈ 5%, waist 4.1%, BP readings 3.2%, HDL 4.5%).
 
@@ -206,12 +206,12 @@ ethnicity-flag ablation are exploratory and labelled as such.
 
 ### 6.1 Historical validation (selection data)
 
-| Model | AUROC | AUPRC | Brier |
-|---|---|---|---|
-| Logistic raw | 0.7763 | 0.5419 | 0.1676 |
-| Logistic + ontology | 0.7802 | 0.5486 | 0.1663 |
-| XGBoost raw | 0.7797 | 0.5433 | 0.1663 |
-| XGBoost + ontology | 0.7806 | 0.5437 | 0.1657 |
+| Model                                  | AUROC  | AUPRC  | Brier  |
+| -------------------------------------- | ------ | ------ | ------ |
+| Logistic raw                           | 0.7763 | 0.5419 | 0.1676 |
+| Logistic + ontology                    | 0.7802 | 0.5486 | 0.1663 |
+| XGBoost raw                            | 0.7797 | 0.5433 | 0.1663 |
+| XGBoost + ontology                     | 0.7806 | 0.5437 | 0.1657 |
 | XGBoost + ontology (no ethnicity flag) | 0.7785 | 0.5391 | 0.1665 |
 
 Hybrid alpha selected: **0.10** (0.10/0.15/0.20 tied exactly on validation sensitivity/PPV; tie broken
@@ -219,28 +219,28 @@ toward the smallest alpha). Alpha 0.10 found 151/353 positives at 20% capacity v
 
 ### 6.2 Temporal test discrimination
 
-| Model (5-seed ensemble) | AUROC | AUPRC | Brier | seed SD (AUROC/AUPRC) |
-|---|---|---|---|---|
-| Logistic raw | 0.7723 | 0.4598 | 0.1509 | – (deterministic) |
-| **Logistic + ontology features** | 0.7718 | **0.4612** | 0.1503 | – |
-| XGBoost raw | 0.7689 | **0.4629** | 0.1507 | 0.0005 / 0.0007 |
-| XGBoost + ontology features | 0.7678 | 0.4600 | 0.1506 | 0.0004 / 0.0018 |
-| XGBoost + ontology (no ethnicity flag) | 0.7686 | 0.4619 | 0.1505 | 0.0004 / 0.0011 |
-| XGBoost + generic control features | 0.7678 | 0.4600 | 0.1506 | 0.0004 / 0.0018 |
-| *CDC/ADA risk test (published)* | *0.7180* | *0.3803* | *n/a (points)* | — |
+| Model (5-seed ensemble)                | AUROC      | AUPRC            | Brier            | seed SD (AUROC/AUPRC) |
+| -------------------------------------- | ---------- | ---------------- | ---------------- | --------------------- |
+| Logistic raw                           | 0.7723     | 0.4598           | 0.1509           | – (deterministic)    |
+| **Logistic + ontology features** | 0.7718     | **0.4612** | 0.1503           | –                    |
+| XGBoost raw                            | 0.7689     | **0.4629** | 0.1507           | 0.0005 / 0.0007       |
+| XGBoost + ontology features            | 0.7678     | 0.4600           | 0.1506           | 0.0004 / 0.0018       |
+| XGBoost + ontology (no ethnicity flag) | 0.7686     | 0.4619           | 0.1505           | 0.0004 / 0.0011       |
+| XGBoost + generic control features     | 0.7678     | 0.4600           | 0.1506           | 0.0004 / 0.0018       |
+| *CDC/ADA risk test (published)*      | *0.7180* | *0.3803*       | *n/a (points)* | —                    |
 
 Figure: `artifacts/roc_pr_curves.png`, `artifacts/calibration.png`.
 
 ### 6.3 Fixed screening capacity (prevalence 0.2308; 20% ceiling = 0.867)
 
-| Policy | Sens @10% | Sens @20% (found/983) | Sens @30% | PPV @20% | Lift @20% | Frac. of ceiling @20% |
-|---|---|---|---|---|---|---|
-| XGBoost raw | 0.230 | 0.412 (405) | 0.582 | 0.475 | 2.06 | 0.475 |
-| XGBoost + ontology features | 0.225 | 0.409 (402) | 0.578 | 0.472 | 2.04 | 0.472 |
-| Logistic raw | 0.223 | 0.414 (407) | 0.593 | 0.478 | 2.07 | 0.478 |
-| **Logistic + ontology features** | 0.226 | **0.423 (416)** | **0.596** | **0.488** | **2.12** | **0.488** |
-| Ontology-only rule score | 0.196 | 0.343 (337) | 0.475 | 0.396 | 1.71 | 0.396 |
-| CDC/ADA risk test (published) | 0.199 | 0.372 (366) | 0.520 | 0.430 | 1.86 | 0.430 |
+| Policy                                 | Sens @10% | Sens @20% (found/983) | Sens @30%       | PPV @20%        | Lift @20%      | Frac. of ceiling @20% |
+| -------------------------------------- | --------- | --------------------- | --------------- | --------------- | -------------- | --------------------- |
+| XGBoost raw                            | 0.230     | 0.412 (405)           | 0.582           | 0.475           | 2.06           | 0.475                 |
+| XGBoost + ontology features            | 0.225     | 0.409 (402)           | 0.578           | 0.472           | 2.04           | 0.472                 |
+| Logistic raw                           | 0.223     | 0.414 (407)           | 0.593           | 0.478           | 2.07           | 0.478                 |
+| **Logistic + ontology features** | 0.226     | **0.423 (416)** | **0.596** | **0.488** | **2.12** | **0.488**       |
+| Ontology-only rule score               | 0.196     | 0.343 (337)           | 0.475           | 0.396           | 1.71           | 0.396                 |
+| CDC/ADA risk test (published)          | 0.199     | 0.372 (366)           | 0.520           | 0.430           | 1.86           | 0.430                 |
 
 Figure: `artifacts/capacity_sensitivity.png` (ceiling drawn as dashed line).
 
@@ -250,10 +250,10 @@ budget, i.e. substantial headroom remains at this feature set.
 
 ### 6.4 Primary endpoint (H2, confirmatory) — null
 
-| | Sensitivity @20% | Positives found |
-|---|---|---|
-| XGBoost only (ML policy) | 0.4120 | 405/983 |
-| Hybrid (XGB + 0.10 · rule score) | 0.4090 | 402/983 |
+|                                                                  | Sensitivity @20%                               | Positives found                      |
+| ---------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------ |
+| XGBoost only (ML policy)                                         | 0.4120                                         | 405/983                              |
+| Hybrid (XGB + 0.10 · rule score)                                | 0.4090                                         | 402/983                              |
 | **Difference, prespecified direction (hybrid − ML-only)** | **−0.0031, 95% CI [−0.0100, +0.0079]** | (paired bootstrap, 1,000; SE 0.0046) |
 
 (`research_results.json` stores the same interval as ML-only − hybrid = +0.0031
@@ -266,11 +266,11 @@ Figure: `artifacts/primary_effect_ci.png`.
 
 ### 6.5 E3 — does the knowledge layer help one model family more? (exploratory)
 
-| Comparison | Δ sensitivity @20% (95% CI) | Δ AUPRC (95% CI) |
-|---|---|---|
-| Logistic + ontology vs raw | **+0.0092 [−0.0038, +0.0185]** | +0.0014 [−0.0047, +0.0070] |
-| XGBoost + ontology vs raw | −0.0031 [−0.0181, +0.0114] | −0.0029 [−0.0092, +0.0038] |
-| XGBoost + ontology (no ethnicity flag) vs raw | +0.0000 [−0.0110, +0.0144] | — |
+| Comparison                                    | Δ sensitivity @20% (95% CI)          | Δ AUPRC (95% CI)            |
+| --------------------------------------------- | ------------------------------------- | ---------------------------- |
+| Logistic + ontology vs raw                    | **+0.0092 [−0.0038, +0.0185]** | +0.0014 [−0.0047, +0.0070]  |
+| XGBoost + ontology vs raw                     | −0.0031 [−0.0181, +0.0114]          | −0.0029 [−0.0092, +0.0038] |
+| XGBoost + ontology (no ethnicity flag) vs raw | +0.0000 [−0.0110, +0.0144]           | —                           |
 
 All intervals cross zero and all point effects are below the MDE. The **direction** matches the
 prespecified hypothesis (threshold flags help a linear model at least as much as a flexible tree),
@@ -283,13 +283,13 @@ Figure: `artifacts/e3_model_family_deltas.png`.
 
 Ontology-minus-raw deltas (AUPRC, sensitivity@20%) by training fraction:
 
-| Fraction (n) | Logistic ΔAUPRC | Logistic Δsens | XGBoost ΔAUPRC | XGBoost Δsens |
-|---|---|---|---|---|
-| 5% (305) | −0.0044 | −0.0119 | +0.0008 | +0.0020 |
-| 10% (610) | −0.0037 | −0.0010 | +0.0012 | +0.0044 |
-| 25% (1,525) | −0.0007 | −0.0020 | −0.0014 | +0.0003 |
-| 50% (3,051) | **+0.0024** | **+0.0061** | −0.0021 | −0.0027 |
-| 100% (6,103) | +0.0014 | +0.0092 | −0.0044 | −0.0061 |
+| Fraction (n) | Logistic ΔAUPRC  | Logistic Δsens   | XGBoost ΔAUPRC | XGBoost Δsens |
+| ------------ | ----------------- | ----------------- | --------------- | -------------- |
+| 5% (305)     | −0.0044          | −0.0119          | +0.0008         | +0.0020        |
+| 10% (610)    | −0.0037          | −0.0010          | +0.0012         | +0.0044        |
+| 25% (1,525)  | −0.0007          | −0.0020          | −0.0014        | +0.0003        |
+| 50% (3,051)  | **+0.0024** | **+0.0061** | −0.0021        | −0.0027       |
+| 100% (6,103) | +0.0014           | +0.0092           | −0.0044        | −0.0061       |
 
 No consistent low-data advantage: the linear model's gain turns positive only at ≥50% data, the tree
 model's turns negative. Reported as measured. Figure: `artifacts/e1_learning_curve.png`.
@@ -298,12 +298,12 @@ model's turns negative. Reported as measured. Figure: `artifacts/e1_learning_cur
 
 Mean over 3 masked repeats:
 
-| Model | AUPRC @0% | AUPRC @30% | Δ | Sens@20% @0% | Sens@20% @30% | Δ |
-|---|---|---|---|---|---|---|
-| Logistic + ontology | 0.4612 | 0.4597 | −0.0015 | 0.4232 | 0.4218 | **−0.0014** |
-| Logistic raw | 0.4598 | 0.4578 | −0.0020 | 0.4140 | 0.4140 | −0.0000 |
-| XGBoost raw | 0.4629 | 0.4597 | −0.0032 | 0.4120 | 0.4076 | −0.0044 |
-| XGBoost + ontology policy (hybrid) | **0.4633** | **0.4608** | −0.0025 | 0.4090 | 0.4093 | +0.0003 |
+| Model                              | AUPRC @0%        | AUPRC @30%       | Δ       | Sens@20% @0% | Sens@20% @30% | Δ                 |
+| ---------------------------------- | ---------------- | ---------------- | -------- | ------------ | ------------- | ------------------ |
+| Logistic + ontology                | 0.4612           | 0.4597           | −0.0015 | 0.4232       | 0.4218        | **−0.0014** |
+| Logistic raw                       | 0.4598           | 0.4578           | −0.0020 | 0.4140       | 0.4140        | −0.0000           |
+| XGBoost raw                        | 0.4629           | 0.4597           | −0.0032 | 0.4120       | 0.4076        | −0.0044           |
+| XGBoost + ontology policy (hybrid) | **0.4633** | **0.4608** | −0.0025 | 0.4090       | 0.4093        | +0.0003            |
 
 The hybrid policy keeps the highest AUPRC at every masking rate; the linear models are the most
 stable at capacity. The rule layer never saw information the ML system lacked: ontology features were
@@ -330,15 +330,15 @@ supported by these data.
 Selected rows at 20% capacity (all groups ≥ 50 participants and ≥ 10 positives; full table in
 `research_results.json → subgroups`):
 
-| Subgroup | n | Prev. | Sens (XGB raw) | Sens (XGB + ontology) |
-|---|---|---|---|---|
-| All | 4,260 | 0.231 | 0.412 | 0.409 |
-| Age 18–39 | 1,537 | 0.094 | 0.517 | 0.524 |
-| Age 60+ | 1,562 | 0.354 | 0.295 | 0.293 |
-| Female | 2,347 | 0.220 | 0.431 | 0.451 |
-| Male | 1,913 | 0.244 | 0.388 | 0.373 |
-| Non-Hispanic Black | 473 | 0.383 | 0.271 | 0.276 |
-| Hispanic | 731 | 0.242 | 0.469 | 0.452 |
+| Subgroup           | n     | Prev. | Sens (XGB raw) | Sens (XGB + ontology) |
+| ------------------ | ----- | ----- | -------------- | --------------------- |
+| All                | 4,260 | 0.231 | 0.412          | 0.409                 |
+| Age 18–39         | 1,537 | 0.094 | 0.517          | 0.524                 |
+| Age 60+            | 1,562 | 0.354 | 0.295          | 0.293                 |
+| Female             | 2,347 | 0.220 | 0.431          | 0.451                 |
+| Male               | 1,913 | 0.244 | 0.388          | 0.373                 |
+| Non-Hispanic Black | 473   | 0.383 | 0.271          | 0.276                 |
+| Hispanic           | 731   | 0.242 | 0.469          | 0.452                 |
 
 Sensitivity is far lower in the high-prevalence 60+ group simply because the fixed capacity is
 oversubscribed there; differences between rows are not interaction tests and are not powered.
@@ -346,6 +346,7 @@ oversubscribed there; differences between rows are not interaction tests and are
 ## 7. Discussion
 
 **What the results support.**
+
 1. **The primary endpoint is null and the null is informative.** With the protocol frozen before
    test access, α selected on historical validation, and an MDE computed in advance (0.0143), the
    hybrid rule-score policy neither helps nor harms top-20% triage: hybrid − ML-only = −0.003
@@ -407,19 +408,19 @@ must be made against this protocol, at this capacity, with this ceiling.
 
 ## Artifact index
 
-| Figure / table | File |
-|---|---|
-| ROC + PR curves | `artifacts/roc_pr_curves.png` |
-| Calibration | `artifacts/calibration.png` |
-| Capacity sensitivity (all policies + ceiling) | `artifacts/capacity_sensitivity.png` |
-| Primary effect CI | `artifacts/primary_effect_ci.png` |
-| E1 learning curve | `artifacts/e1_learning_curve.png` |
-| E2 missing-input stress | `artifacts/e2_missing_input.png` |
-| E3 model-family deltas | `artifacts/e3_model_family_deltas.png` |
-| All numbers | `artifacts/research_results.json` |
-| Per-participant predictions | `artifacts/test_predictions.csv` |
-| Cohort composition | `artifacts/cohort_composition.csv` |
-| Historical validation metrics | `artifacts/historical_validation_metrics.csv` |
-| Published baseline tables | `artifacts/published_score_baseline.csv` |
-| QC / missingness / cohort flow | `artifacts/data_qc.json` |
-| Provenance (commit, tag, versions) | `research_results.json → protocol`, `docs/DECISIONS.md` |
+| Figure / table                                | File                                                         |
+| --------------------------------------------- | ------------------------------------------------------------ |
+| ROC + PR curves                               | `artifacts/roc_pr_curves.png`                              |
+| Calibration                                   | `artifacts/calibration.png`                                |
+| Capacity sensitivity (all policies + ceiling) | `artifacts/capacity_sensitivity.png`                       |
+| Primary effect CI                             | `artifacts/primary_effect_ci.png`                          |
+| E1 learning curve                             | `artifacts/e1_learning_curve.png`                          |
+| E2 missing-input stress                       | `artifacts/e2_missing_input.png`                           |
+| E3 model-family deltas                        | `artifacts/e3_model_family_deltas.png`                     |
+| All numbers                                   | `artifacts/research_results.json`                          |
+| Per-participant predictions                   | `artifacts/test_predictions.csv`                           |
+| Cohort composition                            | `artifacts/cohort_composition.csv`                         |
+| Historical validation metrics                 | `artifacts/historical_validation_metrics.csv`              |
+| Published baseline tables                     | `artifacts/published_score_baseline.csv`                   |
+| QC / missingness / cohort flow                | `artifacts/data_qc.json`                                   |
+| Provenance (commit, tag, versions)            | `research_results.json → protocol`, `docs/DECISIONS.md` |
