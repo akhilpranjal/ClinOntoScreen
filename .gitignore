@@ -27,5 +27,10 @@ artifacts/*
 .DS_Store
 Thumbs.db
 
-# Notebook runtime output
+# Notebook runtime output (data cache, work-dir artifacts) and local logs
 clinontoscreen_run/
+artifacts_colab_2026-10-29/
+nb_run.log
+nb_run.err
+st_out.log
+st_err.log

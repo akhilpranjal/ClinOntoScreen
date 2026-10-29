@@ -10,7 +10,26 @@ ClinOntoScreen is a research prototype that compares conventional tabular ML wit
 
 At a fixed screening capacity, does an ontology-assisted ML policy identify more participants with HbA1c-defined screen-positive dysglycemia than an ML-only policy on a later NHANES cycle?
 
-The project also assesses whether ontology-derived features affect AUROC, AUPRC and calibration, and whether a rule-based review signal adds value beyond model confidence. No empirical results are claimed until the notebook is run.
+The project also assesses whether ontology-derived features affect AUROC, AUPRC and calibration, whether a rule-based review signal adds value beyond model confidence, and how policies behave at fixed screening capacity (10/20/30%) against the prevalence ceiling `min(1, capacity/prevalence)`.
+
+## Results (canonical run, 2026-10-30)
+
+Protocol frozen at git tag `protocol-v1` before any 2021–2023 outcome was read; full provenance and
+number-by-number log in [`docs/DECISIONS.md`](docs/DECISIONS.md) and
+`artifacts/research_results.json → protocol`.
+
+| Finding | Value |
+|---|---|
+| Cohorts | Historical 2017–Mar 2020: n = 6,103 (28.9% positive); temporal test 2021–2023: n = 4,260 (23.1% positive) |
+| **Primary (confirmatory): hybrid − ML-only sensitivity @20%** | **−0.0031, 95% CI [−0.0100, +0.0079]** — null, inside the pre-registered MDE (0.0143) |
+| Best capacity policy | Logistic + ontology features: sensitivity 0.423 @20% (0.488 of the 0.867 ceiling), PPV 0.488, lift 2.12 |
+| Trained models vs published CDC/ADA risk test | AUPRC 0.460–0.463 vs 0.380; sensitivity@20% 0.407–0.423 vs 0.372 |
+| Knowledge-layer direction by family (exploratory) | Logistic +0.0092 sens [−0.0038, +0.0185]; XGBoost −0.0031 [−0.0181, +0.0114] — both below MDE |
+| Missing-input stress (E2, exploratory) | Hybrid keeps the top AUPRC at every masking rate; logistic + ontology degrades least at 30% masking |
+| Disagreement review (H3, exploratory) | Precision 0.360 vs size-matched confidence review 0.400 — not enriched |
+
+Full manuscript draft with all tables: [`paper/CLINONTOSCREEN_PAPER.md`](paper/CLINONTOSCREEN_PAPER.md).
+The pre-addendum Colab run is preserved unmodified in `artifacts_colab_2026-10-29/` (see its README).
 
 ## Architecture
 
@@ -56,16 +75,21 @@ The CDC indicates that the 2021–2023 cycle uses an updated sample design and m
 
 ```text
 plan.md                         Full research and engineering plan
+plan_addendum.md                Amendment: capacity endpoints, E1–E3, published baseline, MDE
 METHODOLOGY.md                  Outcome, model, ontology and evaluation definitions
 DATA_DICTIONARY.md              Canonical feature and NHANES-source mapping
+paper/CLINONTOSCREEN_PAPER.md   Manuscript draft (all numbers from run artifacts)
 ontology/diabetes_screening.ttl Versioned RDF/OWL knowledge model
 notebooks/01_nhanes_ontology_ml.ipynb
                                 Kaggle/Colab download, train, evaluate and export workflow
+tools/nb_cells/ + build_notebook.py
+                                Plain-Python cell sources the notebook is generated from
 src/clinontoscreen/             Reusable data, ontology, modeling and reporting code
 app.py                          Streamlit results dashboard and interactive case explorer
-docs/                            Paper, experiment, figure and decision logs
+docs/                           Paper, experiment, figure and decision logs (incl. post-run log)
 tests/                           Leakage, ontology and data contract tests
-artifacts/                       Generated local outputs (ignored by Git)
+artifacts/                       Canonical run outputs (ignored by Git)
+artifacts_colab_2026-10-29/     Superseded pre-addendum Colab run, preserved with README
 ```
 
 ## Run in Kaggle or Google Colab
@@ -102,9 +126,10 @@ The test suite checks the data/leakage contract, ontology rules and graph, artif
 
 ## Research integrity
 
-- The final temporal test data are never used for model selection, rule-weight tuning or threshold selection.
+- The final temporal test data are never used for model selection, rule-weight tuning or threshold selection; the protocol is frozen at git tag `protocol-v1` before test outcomes are read, and the run records its commit/tag relation.
+- One confirmatory hypothesis (H2) only; everything else is labelled exploratory, with a smallest detectable difference computed on historical validation before test access.
 - Preprocessing is fitted on historical training data only.
-- All comparisons use the same eligible temporal test cohort.
+- All comparisons use the same eligible temporal test cohort, and every capacity row reports prevalence, the capacity ceiling, PPV and lift — not sensitivity alone.
 - Results include class prevalence, confidence intervals and five training seeds.
 - A generic feature-engineering control is included; the ontology is not credited with a metric gain that can be explained by equivalent features alone.
 - Rule disagreement is not described as proof of uncertainty.

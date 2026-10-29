@@ -28,6 +28,9 @@ screening_budget_df=pd.DataFrame(screening_budget_rows)
 display(screening_budget_df)
 
 # H2, confirmatory: hybrid minus XGBoost-only sensitivity at 20% capacity.
+# NOTE on sign convention: paired_capacity_bootstrap(a, b) returns sensitivity(a) - sensitivity(b).
+# The stored 'difference' is therefore (ML-only) - (hybrid); the prespecified direction
+# (hybrid) - (ML-only) is its negation. Both are stated explicitly in the run log and the paper.
 primary_effect=paired_capacity_bootstrap(y_test,probabilities['xgboost_raw'],hybrid_score)
 base_at20=capacity_pack(y_test,probabilities['xgboost_raw'],PRIMARY_CAPACITY)
 hybrid_at20=capacity_pack(y_test,hybrid_score,PRIMARY_CAPACITY)
@@ -39,7 +42,10 @@ primary_effect.update({'baseline_sensitivity':base_at20['sensitivity'],'hybrid_s
                        'fraction_of_ceiling_hybrid':hybrid_at20['fraction_of_ceiling'],
                        'mde_95_from_historical_validation':MDE['primary_hybrid_vs_xgb_raw']['mde_95'],
                        'capacity':PRIMARY_CAPACITY})
-print('H2 primary endpoint (confirmatory), hybrid minus ML-only sensitivity:',primary_effect)
+print('H2 primary endpoint (confirmatory). Stored difference = ML-only minus hybrid:',primary_effect)
+print('Prespecified direction (hybrid minus ML-only):',
+      round(-primary_effect['difference'],6),
+      'CI [', round(-primary_effect['ci_high'],6), ',', round(-primary_effect['ci_low'],6), ']')
 
 no_eth_base_at20=capacity_pack(y_test,probabilities['xgboost_raw'],PRIMARY_CAPACITY)
 no_eth_hybrid_at20=capacity_pack(y_test,hybrid_score_no_ethnicity,PRIMARY_CAPACITY)
@@ -47,7 +53,8 @@ primary_effect_no_ethnicity=paired_capacity_bootstrap(y_test,probabilities['xgbo
 primary_effect_no_ethnicity.update({'baseline_sensitivity':no_eth_base_at20['sensitivity'],'hybrid_sensitivity':no_eth_hybrid_at20['sensitivity'],
                                     'baseline_positive_found':no_eth_base_at20['positive_found'],'hybrid_positive_found':no_eth_hybrid_at20['positive_found'],
                                     'capacity':PRIMARY_CAPACITY})
-print('Primary endpoint after removing the higher-risk ethnicity rule flag:',primary_effect_no_ethnicity)
+print('Primary endpoint after removing the higher-risk ethnicity rule flag. Stored difference = ML-only minus hybrid:',
+      primary_effect_no_ethnicity)
 
 # E3, exploratory: does the knowledge layer change ranking metrics, and does it help one family more?
 paired_effects = {

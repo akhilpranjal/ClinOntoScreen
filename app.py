@@ -68,12 +68,9 @@ def render_overview(results):
     st.warning("Research prototype only. This is not a diagnostic tool, is not clinically validated, and must not be used to make medical decisions.")
     cols = st.columns(4)
     if results:
-        cohort = results.get("cohort", {})
-        metrics = results.get("metrics", {})
-        test = results.get("temporal_test", {})
-        cols[0].metric("Temporal test participants", f"{cohort.get('test_n', 'N/A'):,}" if isinstance(cohort.get("test_n"), (int, float)) else "N/A")
-        cols[1].metric("Screen-positive prevalence", fmt_num(cohort.get("test_prevalence"), 3))
         primary = results.get("primary_effect", {})
+        cols[0].metric("Temporal test participants", f"{results.get('test_n', 0):,}")
+        cols[1].metric("Screen-positive prevalence", fmt_num(results.get("test_prevalence"), 3))
         cols[2].metric("Hybrid sensitivity @ 20%", fmt_num(primary.get("hybrid_sensitivity"), 3))
         cols[3].metric("ML sensitivity @ 20%", fmt_num(primary.get("baseline_sensitivity"), 3))
     else:
@@ -102,26 +99,42 @@ def render_results(results):
     if not results:
         st.info("No research results found. Run `notebooks/01_nhanes_ontology_ml.ipynb` from top to bottom to create `artifacts/research_results.json` and the model bundle.")
         return
-    metrics = results.get("metrics", {})
-    if metrics:
+    protocol = results.get("protocol", {})
+    st.caption(f"Protocol commit `{protocol.get('commit_hash', 'unavailable')[:12]}` · tag `{protocol.get('protocol_tag', 'not_tagged')}` · "
+               f"primary capacity {fmt_num(protocol.get('primary_capacity'), 0)} · hybrid alpha {fmt_num(protocol.get('hybrid_alpha'), 3)} "
+               f"(no-ethnicity-flag alpha {fmt_num(protocol.get('hybrid_alpha_no_ethnicity'), 3)}) · "
+               f"historical n={results.get('historical_n', 0):,}, temporal test n={results.get('test_n', 0):,}, "
+               f"positives={results.get('test_positive_count', 0):,} (prevalence {fmt_num(results.get('test_prevalence'), 3)}).")
+    models = results.get("models", {})
+    if models:
         rows = []
-        for name, values in metrics.items():
-            rows.append({"Model": name.replace("_", " ").title(), "AUROC": values.get("auroc_mean"), "AUPRC": values.get("auprc_mean"), "Brier": values.get("brier_mean"), "AUROC SD across seeds": values.get("auroc_sd")})
+        for name, values in models.items():
+            ens = values.get("ensemble", {}) if isinstance(values, dict) else {}
+            rows.append({"Model": name.replace("_", " "), "AUROC (mean over seeds)": values.get("auroc_mean"),
+                         "AUPRC (mean over seeds)": values.get("auprc_mean"), "Brier (mean)": values.get("brier_mean"),
+                         "AUROC SD": values.get("auroc_sd"), "AUPRC SD": values.get("auprc_sd"),
+                         "Ensemble AUROC": ens.get("auroc"), "Ensemble AUPRC": ens.get("auprc")})
         table = pd.DataFrame(rows)
-        for col in ["AUROC", "AUPRC", "Brier", "AUROC SD across seeds"]:
+        for col in table.columns[1:]:
             table[col] = pd.to_numeric(table[col], errors="coerce")
-        st.markdown("### Temporal test metrics")
-        st.caption("All numbers below are read from generated result files. N/A means the corresponding value is not present in the run artifact.")
+        st.markdown("### Temporal test discrimination (2021–2023)")
+        st.caption("Seeds affect XGBoost subsampling only; logistic regression is deterministic. Values are read from research_results.json.")
         st.dataframe(table.style.format({c: "{:.3f}" for c in table.columns if c != "Model"}, na_rep="N/A"), use_container_width=True, hide_index=True)
         fig = go.Figure()
-        fig.add_trace(go.Bar(name="AUROC", x=table["Model"], y=table["AUROC"].astype(float)))
-        fig.add_trace(go.Bar(name="AUPRC", x=table["Model"], y=table["AUPRC"].astype(float)))
+        fig.add_trace(go.Bar(name="AUROC (mean)", x=table["Model"], y=table["AUROC (mean over seeds)"]))
+        fig.add_trace(go.Bar(name="AUPRC (mean)", x=table["Model"], y=table["AUPRC (mean over seeds)"]))
         fig.update_layout(barmode="group", yaxis_title="Score", yaxis_range=[0, 1], height=400)
         st.plotly_chart(fig, use_container_width=True)
-    budgets = results.get("screening_budgets", [])
-    if budgets:
-        st.markdown("### Sensitivity at a fixed screening budget")
-        bdf = pd.DataFrame(budgets)
+    capacity_metrics = results.get("capacity_metrics", {})
+    if capacity_metrics:
+        st.markdown("### Sensitivity at a fixed screening capacity")
+        st.caption("Sensitivity_ceiling is min(1, capacity / prevalence): the maximum sensitivity any referral rule can reach at that budget. "
+                   "Fraction_of_ceiling reports how much of that ceiling a policy achieves; lift is PPV divided by prevalence.")
+        rows = []
+        for policy, packs in capacity_metrics.items():
+            for pack in packs:
+                rows.append({"policy": policy, **pack})
+        bdf = pd.DataFrame(rows)
         if {"policy", "capacity", "sensitivity"}.issubset(bdf.columns):
             bdf["budget_pct"] = 100 * bdf["capacity"].astype(float)
             fig = go.Figure()
@@ -130,33 +143,107 @@ def render_results(results):
                 fig.add_trace(go.Scatter(x=group["budget_pct"], y=group["sensitivity"], mode="lines+markers", name=policy))
             fig.update_layout(xaxis_title="Screening capacity (% of eligible cohort)", yaxis_title="Sensitivity / fraction of positive cases found", yaxis_range=[0, 1], height=430)
             st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(bdf, use_container_width=True, hide_index=True)
+            ceiling = bdf[bdf["policy"] == sorted(capacity_metrics)[0]].sort_values("budget_pct")
+            if len(ceiling):
+                fig2 = go.Figure()
+                fig2.add_trace(go.Scatter(x=ceiling["budget_pct"], y=ceiling["sensitivity_ceiling"], mode="lines", name="Capacity ceiling", line=dict(dash="dash", color="#111827")))
+                for policy in ["XGBoost raw", "XGBoost + ontology policy", "CDC/ADA prediabetes risk test (published score)"]:
+                    if policy in capacity_metrics:
+                        g = pd.DataFrame(capacity_metrics[policy]).sort_values("capacity")
+                        fig2.add_trace(go.Scatter(x=100 * g["capacity"], y=g["fraction_of_ceiling"], mode="lines+markers", name=policy))
+                fig2.update_layout(xaxis_title="Screening capacity (% of eligible cohort)", yaxis_title="Fraction of the prevalence ceiling reached", yaxis_range=[0, 1], height=400)
+                st.plotly_chart(fig2, use_container_width=True)
+        show_cols = ["policy", "capacity", "n_selected", "positive_found", "sensitivity", "sensitivity_ceiling",
+                     "fraction_of_ceiling", "precision", "lift", "false_referrals"]
+        show_cols = [c for c in show_cols if c in bdf.columns]
+        st.dataframe(bdf[show_cols], use_container_width=True, hide_index=True)
     effect = results.get("primary_effect", {})
     if effect:
-        st.markdown("### Primary endpoint: hybrid minus ML-only sensitivity at 20% capacity")
+        st.markdown("### Primary endpoint (H2, confirmatory): hybrid minus ML-only sensitivity at 20% capacity")
         delta = effect.get("difference")
         low, high = effect.get("ci_low"), effect.get("ci_high")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Difference", fmt_num(delta), help="Hybrid sensitivity minus XGBoost-only sensitivity on the same temporal test set.")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Difference", fmt_num(delta), help="Stored run convention: ML-only sensitivity minus hybrid sensitivity on the same temporal test set (paired participant bootstrap). The prespecified direction (hybrid minus ML-only) is the negation of this value; both are documented in docs/DECISIONS.md.")
         c2.metric("95% CI lower", fmt_num(low))
         c3.metric("95% CI upper", fmt_num(high))
+        c4.metric("MDE (1.96·SE, historical validation)", fmt_num(effect.get("mde_95_from_historical_validation"), 4),
+                  help="Smallest effect the historical validation could resolve. Effects below it are under the design's resolution.")
+        c5, c6, c7 = st.columns(3)
+        c5.metric("Positives found @20%", f"{effect.get('hybrid_positive_found', 'N/A')} hybrid vs {effect.get('baseline_positive_found', 'N/A')} ML", help="Positive cases found at the same 20% capacity: hybrid policy vs ML-only policy.")
+        c6.metric("Hybrid fraction of ceiling", fmt_num(effect.get("fraction_of_ceiling_hybrid"), 3))
+        c7.metric("ML fraction of ceiling", fmt_num(effect.get("fraction_of_ceiling_baseline"), 3))
         if low is not None and high is not None and low <= 0 <= high:
-            st.info("The 95% interval includes zero. The result does not establish a clear improvement in the primary endpoint.")
+            st.info("The 95% interval includes zero. The result does not establish a change in the primary endpoint (stored direction: ML-only minus hybrid).")
         elif low is not None and low > 0:
-            st.success("The interval is above zero for this run. Interpret the magnitude, assumptions, and limitations before claiming a research contribution.")
+            st.warning("ML-only exceeds hybrid (interval above zero in the stored ML-minus-hybrid direction): the hybrid policy did not help on this run. Report the negative result honestly.")
         elif high is not None and high < 0:
-            st.warning("The estimated hybrid effect is below zero for this run. Report the negative result honestly.")
-    ablation = results.get("race_ethnicity_ablation", {})
-    ablation_effect = ablation.get("primary_effect_without_higher_risk_ethnicity_flag", {})
+            st.success("Hybrid exceeds ML-only (interval below zero in the stored ML-minus-hybrid direction). Interpret the magnitude, assumptions, and limitations before claiming a research contribution.")
+    ablation_effect = results.get("primary_effect_no_ethnicity", {})
     if ablation_effect:
-        st.markdown("### Sensitivity check: remove the higher-risk race/ethnicity rule flag")
+        st.markdown("### Sensitivity check (EX, exploratory): remove the higher-risk race/ethnicity rule flag")
         ab_cols = st.columns(3)
         ab_cols[0].metric("Full-rule hybrid sensitivity @20%", fmt_num(effect.get("hybrid_sensitivity"), 3))
         ab_cols[1].metric("Ablated hybrid sensitivity @20%", fmt_num(ablation_effect.get("hybrid_sensitivity"), 3))
-        ab_cols[2].metric("Ablated hybrid minus ML", fmt_num(ablation_effect.get("difference"), 3))
-        st.caption(ablation.get("interpretation", "Interpret this ablation within the limits of the encoded rules."))
+        ab_cols[2].metric("ML minus ablated hybrid", fmt_num(ablation_effect.get("difference"), 3),
+                          help="Stored convention: ML-only sensitivity minus ablated-hybrid sensitivity (same as the primary endpoint convention).")
+        st.caption("This race_ethnicity_ablation removes only the higher-risk ethnicity risk-factor flag. The Asian-ancestry BMI threshold adaptation (23 vs 25 kg/m²) remains in this specific ablation and is disclosed.")
+    paired = results.get("paired_effects", {})
+    if paired:
+        st.markdown("### E3 (exploratory): does the knowledge layer change ranking, and by how much per model family?")
+        rows = [{"Effect": k.replace("_vs_raw", " vs raw"), "Difference": v.get("difference"), "CI low": v.get("ci_low"),
+                 "CI high": v.get("ci_high"), "SE": v.get("std_error"), "MDE (1.96·SE)": v.get("mde_95_from_historical_validation")} for k, v in paired.items()]
+        pdf = pd.DataFrame(rows)
+        for col in pdf.columns[1:]:
+            pdf[col] = pd.to_numeric(pdf[col], errors="coerce")
+        st.dataframe(pdf.style.format({c: "{:.4f}" for c in pdf.columns if c != "Effect"}, na_rep="N/A"), use_container_width=True, hide_index=True)
+        st.caption("Positive differences favour the ontology-featured model. Intervals crossing zero mean the observed gap is within bootstrap noise at this sample size.")
+    review = results.get("review_summary", {})
+    if review:
+        st.markdown("### H3 (exploratory): guideline disagreement vs size-matched confidence-only review")
+        r1, r2, r3, r4 = st.columns(4)
+        r1.metric("Disagreement set size", str(review.get("disagreement_set_size", "N/A")))
+        r2.metric("Disagreement-set precision", fmt_num(review.get("disagreement_precision"), 3))
+        r3.metric("Confidence-review precision", fmt_num(review.get("confidence_review_precision"), 3))
+        r4.metric("Cohort prevalence", fmt_num(review.get("prevalence"), 3))
+        st.caption("Disagreement = participants where the ML-only top-20% referral set and the ontology-only top-20% referral set differ (symmetric difference). "
+                   "The comparison review set is the same number of participants closest to the referral cutoff by model confidence.")
+    e1 = results.get("e1", [])
+    e1_fig = ARTIFACT_DIR / "e1_learning_curve.png"
+    if e1:
+        st.markdown("### E1 (exploratory): low-data learning curve")
+        st.dataframe(pd.DataFrame(e1).round(4), use_container_width=True, hide_index=True)
+        if e1_fig.exists():
+            st.image(str(e1_fig), use_container_width=True)
+    e2 = results.get("e2", [])
+    e2_fig = ARTIFACT_DIR / "e2_missing_input.png"
+    if e2:
+        st.markdown("### E2 (exploratory): missing-input stress test")
+        st.dataframe(pd.DataFrame(e2).round(4), use_container_width=True, hide_index=True)
+        if e2_fig.exists():
+            st.image(str(e2_fig), use_container_width=True)
+    published = results.get("published_baseline", [])
+    if published:
+        st.markdown("### Published baseline: CDC/ADA prediabetes risk test")
+        st.caption("The official point-based risk test, mapped to NHANES items. Gestational-diabetes history and family history are unavailable in both cycles, "
+                   f"so those items score 0 in every participant (unavailable items: {', '.join(protocol.get('cdc_ada_unavailable_items', []))}). "
+                   "It is included as a published-knowledge baseline, not as a trained comparator.")
+        st.dataframe(pd.DataFrame(published).round(4), use_container_width=True, hide_index=True)
+    subgroups = results.get("subgroups", [])
+    if subgroups:
+        st.markdown("### Subgroup summary at 20% capacity (exploratory)")
+        sdf = pd.DataFrame(subgroups)
+        for col in sdf.select_dtypes("number").columns:
+            sdf[col] = pd.to_numeric(sdf[col], errors="coerce")
+        st.dataframe(sdf.round(4), use_container_width=True, hide_index=True)
+        st.caption("Descriptive only. Subgroups were not powered for interaction tests; do not read differences between rows as evidence of differential performance.")
+    mde = results.get("mde", {})
+    if mde:
+        st.markdown("### Smallest detectable differences (historical validation)")
+        st.dataframe(pd.DataFrame([{"Comparison": k, "SE": v.get("std_error"), "MDE (1.96·SE)": v.get("mde_95")} for k, v in mde.items()]).round(4), use_container_width=True, hide_index=True)
+        st.caption("Computed on the historical validation split before any test-set access. It is the noise floor of this design, not a target.")
     st.markdown("### Diagnostic plots from the notebook run")
-    figure_names = ["roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png"]
+    figure_names = ["roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png",
+                    "e1_learning_curve.png", "e2_missing_input.png", "e3_model_family_deltas.png"]
     present = [(name, ARTIFACT_DIR / name) for name in figure_names if (ARTIFACT_DIR / name).exists()]
     for name, path in present:
         st.markdown(f"**{name.replace('_', ' ').replace('.png', '').title()}**")
@@ -187,11 +274,10 @@ def render_case_explorer(bundle):
         hypertension = c10.selectbox("Ever told BP was high?", ["Yes", "No", "Unknown"])
         treatment = c11.selectbox("Taking BP medicine?", ["Yes", "No", "Unknown"])
         smoking = c12.selectbox("Ever smoked 100 cigarettes?", ["Yes", "No", "Unknown"])
-        c13, c14, c15, c16 = st.columns(4)
-        vwork = c13.selectbox("Vigorous work activity", ["Yes", "No", "Unknown"])
-        mwork = c14.selectbox("Moderate work activity", ["Yes", "No", "Unknown"])
-        vrec = c15.selectbox("Vigorous recreational activity", ["Yes", "No", "Unknown"])
-        mrec = c16.selectbox("Moderate recreational activity", ["Yes", "No", "Unknown"])
+        c13, c14, c15 = st.columns(3)
+        hdl = c13.slider("HDL cholesterol (mg/dL)", 10.0, 150.0, 50.0, 1.0)
+        leisure = c14.slider("Weekly leisure-time activity minutes", 0.0, 2000.0, 120.0, 10.0)
+        sedentary = c15.slider("Daily sedentary minutes", 0.0, 1200.0, 400.0, 10.0)
         c17, c18, c19 = st.columns(3)
         hf = c17.selectbox("Heart failure history", ["Yes", "No", "Unknown"])
         chd = c18.selectbox("Coronary heart disease history", ["Yes", "No", "Unknown"])
@@ -210,11 +296,10 @@ def render_case_explorer(bundle):
         row = {
             "age_years": float(age), "sex_code": float(sex_code), "race_ethnicity_code": float(race_code),
             "education_code": edu_code, "income_poverty_ratio": float(pir), "bmi": float(bmi), "waist_cm": float(waist),
+            "hdl_chol_mgdl": float(hdl), "leisure_activity_minutes": float(leisure), "sedentary_minutes": float(sedentary),
             "systolic_bp_mean": float(sbp), "diastolic_bp_mean": float(dbp),
             "hypertension_history": code(hypertension), "hypertension_treatment": code(treatment),
-            "ever_smoked_100_cigs": code(smoking), "vigorous_work_activity": code(vwork),
-            "moderate_work_activity": code(mwork), "vigorous_recreation_activity": code(vrec),
-            "moderate_recreation_activity": code(mrec), "heart_failure_history": code(hf),
+            "ever_smoked_100_cigs": code(smoking), "heart_failure_history": code(hf),
             "coronary_heart_disease_history": code(chd), "angina_history": code(angina),
             "heart_attack_history": code(heart_attack), "stroke_history": code(stroke),
         }
@@ -236,8 +321,10 @@ def render_case_explorer(bundle):
             for reason in explanation["unknowns"]:
                 st.write(f"- {reason}")
         if bundle:
-            raw_prob = probability_from_models(bundle["models"]["xgboost_raw"], raw[RAW_FEATURES])[0]
-            augmented = derived[RAW_FEATURES + bundle["ontology_feature_columns"]]
+            raw_features = bundle.get("raw_features", RAW_FEATURES)
+            ontology_features = bundle.get("ontology_features", [])
+            raw_prob = probability_from_models(bundle["models"]["xgboost_raw"], raw[raw_features])[0]
+            augmented = derived[raw_features + ontology_features]
             onto_prob = probability_from_models(bundle["models"]["xgboost_ontology"], augmented)[0]
             alpha = float(bundle.get("hybrid_alpha", 0.0))
             hybrid_score = raw_prob + alpha * float(derived.iloc[0]["onto_rule_priority_score"])
@@ -310,7 +397,7 @@ HbA1c-defined screen-positive dysglycemia (`LBXGH >= 5.7%`) in adults who report
 HbA1c, glucose, glycemic laboratory measurements, diabetes questionnaire answers, diabetes medication variables, participant identifiers and outcome fields are excluded from predictors.
 
 ### Main comparison
-Logistic Regression and XGBoost with raw features versus raw + ontology-derived features; ontology-only screening-rule ranking; and an ML + ontology prioritization policy. The main policy metric is sensitivity at 20% screening capacity, with 10% and 30% as secondary capacities.
+Logistic Regression and XGBoost with raw features versus raw + ontology-derived features; ontology-only screening-rule ranking; an ML + ontology prioritization policy; and the published CDC/ADA prediabetes risk test as a published-knowledge baseline (gestational-diabetes and family-history items are unavailable in NHANES and score 0). The main policy metric is sensitivity at 20% screening capacity, with 10% and 30% as secondary capacities. Every capacity row also reports the prevalence ceiling min(1, capacity / prevalence), the fraction of that ceiling achieved, PPV and lift.
 
 ### Limitations
 The ontology encodes a bounded subset of screening guidance. NHANES cycles use different survey designs and procedures. Results do not demonstrate clinical validity, causal mechanisms or guaranteed generalization to hospitals. Race/ethnicity-sensitive rules require careful interpretation and a sensitivity analysis.

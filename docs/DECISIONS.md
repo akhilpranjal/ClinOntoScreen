@@ -116,4 +116,64 @@ sanity check on NHANES 2017–March 2020 and **before** any model was evaluated 
 
 ## 2026-10-30 — Post-run log
 
-- No entries yet. Bug fixes and deviations must be appended here with the date and the reason.
+**Canonical run.** The addendum-compliant notebook run completed 2026-10-30 00:45 local; artifacts are in
+`artifacts/`. Provenance recorded in `research_results.json`: commit `dc7fc37`, protocol tag `protocol-v1`
+(created at `d30f8f8`, before any 2021–2023 outcome was read; relation recorded as `ancestor`), Python 3.10,
+pandas 2.3.0, scikit-learn 1.6.1, xgboost 3.2.0, rdflib 7.6.0. Cohort matches the plan: historical n=6,103
+(1,766 positives, prevalence 0.2894), temporal test n=4,260 (983 positives, prevalence 0.2308).
+
+**Bug fixes after the protocol tag (all recording/display only, none change an analysis):**
+1. `2026-10-30 e3b3400` — subgroup summary crashed on the numpy boolean mask for the "all" group
+   (`.fillna` on ndarray). Fixed mask coercion; subgroup values themselves are derived by unchanged code.
+2. `2026-10-30 dc7fc37` — the published CDC/ADA risk test is a point total (0–11), not a probability;
+   `brier_score_loss` rejected it. Fixed to report AUROC/AUPRC only for that baseline (Brier is undefined
+   for a point score and is marked `null` with a note).
+3. `2026-10-30 e3b3400` — `git_info()` extended to record the tag relation (`exact`/`ancestor`) so the run
+   discloses that the executed commit is three documentation/reporting commits after the `protocol-v1` tag.
+   No analysis code differs from the tagged protocol: `git diff protocol-v1 dc7fc37` touches only
+   `tools/nb_cells/cell07` (subgroup mask), `cell01` (git_info), `cell10` (point-score metrics), and docs.
+
+**Results (all from `artifacts/research_results.json`):**
+- **H2 (confirmatory):** stored `difference = +0.0031`, 95% CI [−0.0079, +0.0100] (paired bootstrap,
+  1,000) is **ML-only minus hybrid** (the notebook's print label at run time said "hybrid minus ML" —
+  a label bug, fixed in `dc7fc37`-era code by an explicit convention note; no number changes).
+  In the prespecified direction, **hybrid − ML-only = −0.0031, 95% CI [−0.0100, +0.0079]**.
+  Point estimates: hybrid 0.4090 (402/983) vs ML-only 0.4120 (405/983) at 20% capacity.
+  The interval crosses zero and lies entirely inside the historical-validation MDE (0.0143): **null**,
+  no evidence that the hybrid ranking policy changes the primary endpoint. `hybrid_alpha` selected on
+  historical validation = 0.10 (0.0–0.30 grid; alphas 0.10/0.15/0.20 tied exactly, tie broken toward the
+  smallest alpha by the prespecified sort).
+- **Capacity ceilings:** at prevalence 0.2308 the 20%-capacity ceiling is 0.867; best policy
+  (logistic + ontology features) reaches sensitivity 0.423 = 0.488 of ceiling, PPV 0.488, lift 2.12.
+- **E3 (exploratory):** logistic + ontology features vs raw: sensitivity@20% +0.0092 CI [−0.0038, +0.0185],
+  AUPRC +0.0014 CI [−0.0047, +0.0070]. XGBoost + ontology features: sensitivity@20% −0.0031
+  CI [−0.0181, +0.0114], AUPRC −0.0029 CI [−0.0092, +0.0038]. All intervals cross zero and all point
+  effects are below MDE; the linear-family direction (+) vs tree-family direction (−) matches the
+  prespecified expectation but is **not** established.
+  *Sign conventions:* `paired_effects.*.difference` follows the label order (e.g. `logistic_ontology_vs_raw`
+  = onto − raw), while `primary_effect` / `primary_effect_no_ethnicity` are stored as
+  **ML-only − hybrid** (see H2 entry above). The ethnicity-flag ablation in prespecified direction
+  (ablated hybrid − ML-only) = **−0.0051, 95% CI [−0.0119, +0.0053]** (stored as +0.0051).
+- **Generic-feature control:** XGBoost + generic-equivalent features is numerically identical to
+  XGBoost + ontology features (AUPRC 0.4597 both), i.e. the rule-derived columns add nothing beyond
+  their raw inputs under this feature set.
+- **E1 (exploratory):** ontology-feature gain for logistic regression grows as training data shrinks at
+  50% (AUPRC +0.0024, sensitivity@20% +0.0061) but is −0.0044 at 5%; XGBoost mixed. No consistent
+  low-data advantage; reported as measured.
+- **E2 (exploratory):** under 30% MCAR masking, logistic + ontology features degrades least
+  (AUPRC 0.4612→0.4597, sensitivity@20% 0.4232→0.4218) while raw baselines lose more
+  (logistic raw AUPRC 0.4598→0.4578); rule layer reports not-assessable instead of guessing
+  (not-assessable fraction stayed 0.004 because masked inputs are mostly risk factors, not eligibility inputs).
+- **H3 (exploratory), disagreement vs size-matched confidence review:** disagreement set 750 participants,
+  precision 0.360; confidence-only review of the same size, precision 0.400; cohort prevalence 0.231.
+  The disagreement set is *not* enriched relative to confidence review — reported as measured.
+- **Published CDC/ADA baseline:** temporal-test AUROC 0.718, AUPRC 0.380, sensitivity@20% 0.372
+  (fraction of ceiling 0.430). All trained models (AUPRC 0.460–0.463, sensitivity@20% 0.407–0.423)
+  outperform the published point score on this cohort; two scoring items (gestational diabetes,
+  family history) are unavailable in NHANES and score 0 for every participant — disclosed as a
+  mapping limitation, not as a property of the published test.
+
+**Divergences from the plan:** none in analysis. The exploratory review-related figures use the
+prespecified symmetric-difference definition; the older `review_analysis` formulation from the
+pre-addendum run is superseded (that run is preserved, unmodified, in `artifacts_colab_2026-10-29/`
+with a note that it predates the addendum feature harmonization and experiments).
