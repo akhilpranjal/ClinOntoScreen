@@ -49,3 +49,5 @@ def test_notebook_declares_a_predictor_leakage_contract():
     assert "LBXGH" in source
     assert "DIQ010" in source
     assert "DIQ160" in source
+    assert "yes_no_flag(out,'hypertension_treatment')" in source
+    assert "yn('hypertension_treatment')" in source
