@@ -1,12 +1,12 @@
 """Artifact writing and reproducible research-result reports."""
 from __future__ import annotations
 import json
-import subprocess
-import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 import numpy as np
+import re
+import shutil
 
 
 def json_safe(value: Any) -> Any:
@@ -34,91 +34,37 @@ def write_json(path: str | Path, content: dict) -> Path:
     return destination
 
 
-def get_protocol_metadata() -> dict:
-    """Collect reproducibility metadata for protocol freeze (plan addendum section 9).
+def load_results(root: str | Path) -> dict | None:
+    """Prefer private runtime artifacts, falling back to committed aggregate results."""
+    root = Path(root)
+    for candidate in (root / "artifacts" / "research_results.json", root / "results" / "research_results.json"):
+        if candidate.exists():
+            return json.loads(candidate.read_text(encoding="utf-8"))
+    return None
 
-    Returns git commit hash, package versions, Python version, and timestamp.
-    """
-    meta: dict[str, Any] = {
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "python_version": sys.version,
+
+def export_public_results(source: str | Path, destination: str | Path) -> list[Path]:
+    """Copy aggregate result files while refusing participant identifiers or large tabular outputs."""
+    source, destination = Path(source), Path(destination)
+    if not source.exists():
+        raise FileNotFoundError(source)
+    allowed = {
+        "research_results.json", "run_manifest.json", "tier1_metrics.csv", "figures.json",
+        "roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png",
     }
-    # Git commit hash
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode == 0:
-            meta["git_commit_hash"] = result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        meta["git_commit_hash"] = "unavailable"
-
-    # Package versions
-    packages = [
-        "numpy", "pandas", "scikit-learn", "xgboost", "rdflib",
-        "streamlit", "plotly", "networkx", "joblib", "matplotlib",
-    ]
-    versions = {}
-    for pkg in packages:
-        try:
-            mod = __import__(pkg.replace("-", "_"))
-            versions[pkg] = getattr(mod, "__version__", "unknown")
-        except ImportError:
-            versions[pkg] = "not_installed"
-    # scikit-learn special case
-    try:
-        import sklearn
-        versions["scikit-learn"] = sklearn.__version__
-    except ImportError:
-        pass
-    meta["package_versions"] = versions
-    return meta
-
-
-def cohort_summary(df, label: str = "cohort") -> dict:
-    """Generate a summary of a cohort dataframe for reporting."""
-    summary: dict[str, Any] = {
-        "label": label,
-        "n_participants": int(len(df)),
-    }
-    if "target" in df.columns:
-        summary["positive_count"] = int(df["target"].sum())
-        summary["negative_count"] = int(len(df) - df["target"].sum())
-        summary["prevalence"] = float(df["target"].mean())
-    if "cycle" in df.columns:
-        summary["cycles"] = df["cycle"].value_counts().to_dict()
-
-    # Missingness per feature
-    missingness = {}
-    for col in df.columns:
-        n_missing = int(df[col].isna().sum())
-        if n_missing > 0:
-            missingness[col] = {
-                "n_missing": n_missing,
-                "pct_missing": round(float(n_missing / len(df) * 100), 2),
-            }
-    summary["missingness"] = missingness
-    return summary
-
-
-def write_feature_manifest(
-    path: str | Path,
-    raw_features: list[str],
-    ontology_features: list[str],
-    forbidden: list[str],
-    feature_metadata: dict | None = None,
-) -> Path:
-    """Write a JSON feature manifest for reproducibility tracking."""
-    manifest = {
-        "raw_features": raw_features,
-        "ontology_features": ontology_features,
-        "forbidden_predictors": forbidden,
-        "n_raw": len(raw_features),
-        "n_ontology": len(ontology_features),
-        "n_total": len(raw_features) + len(ontology_features),
-    }
-    if feature_metadata:
-        manifest["metadata"] = feature_metadata
-    return write_json(path, manifest)
-
+    destination.mkdir(parents=True, exist_ok=True)
+    copied = []
+    for path in source.iterdir():
+        if not path.is_file() or path.name not in allowed:
+            continue
+        data = path.read_bytes()
+        if re.search(rb"\bSEQN\b", data, flags=re.IGNORECASE):
+            raise ValueError(f"Participant identifier SEQN found in {path}")
+        if path.suffix.lower() == ".csv" and data.count(b"\n") > 1001:
+            raise ValueError(f"Refusing implausibly large public table: {path}")
+        target = destination / path.name
+        shutil.copy2(path, target)
+        copied.append(target)
+    if not copied:
+        raise ValueError(f"No allow-listed aggregate results found in {source}")
+    return copied

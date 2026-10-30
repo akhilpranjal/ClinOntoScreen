@@ -121,13 +121,21 @@ def derive_ontology_features(frame: pd.DataFrame, include_ethnicity: bool = True
     cvd_cols = ["heart_failure_history", "coronary_heart_disease_history", "angina_history", "heart_attack_history", "stroke_history"]
     cvd = _any_flag([_yes_no_flag(out, col) for col in cvd_cols], out.index)
 
-    activity_cols = ["vigorous_work_activity", "moderate_work_activity", "vigorous_recreation_activity", "moderate_recreation_activity"]
-    activity = pd.concat([_yes_no_flag(out, col) for col in activity_cols], axis=1)
-    inactivity = pd.Series(np.nan, index=out.index, dtype="float64")
-    any_active = activity.eq(1).any(axis=1)
-    all_no = activity.notna().all(axis=1) & activity.eq(0).all(axis=1)
-    inactivity.loc[any_active] = 0.0
-    inactivity.loc[all_no] = 1.0
+    leisure = _num(out, "leisure_activity_minutes")
+    sedentary = _num(out, "sedentary_minutes")
+    if leisure.notna().any() or sedentary.notna().any():
+        inactivity = pd.Series(np.nan, index=out.index, dtype="float64")
+        observed = leisure.notna() | sedentary.notna()
+        inactivity.loc[observed] = ((leisure.fillna(0) <= 0) & (sedentary.fillna(0) >= 480)).loc[observed].astype(float)
+    else:
+        # Backward-compatible interpretation for older serialized examples.
+        activity_cols = ["vigorous_work_activity", "moderate_work_activity", "vigorous_recreation_activity", "moderate_recreation_activity"]
+        activity = pd.concat([_yes_no_flag(out, col) for col in activity_cols], axis=1)
+        inactivity = pd.Series(np.nan, index=out.index, dtype="float64")
+        any_active = activity.eq(1).any(axis=1)
+        all_no = activity.notna().all(axis=1) & activity.eq(0).all(axis=1)
+        inactivity.loc[any_active] = 0.0
+        inactivity.loc[all_no] = 1.0
 
     ethnicity = pd.Series(np.nan, index=out.index, dtype="float64")
     if include_ethnicity:

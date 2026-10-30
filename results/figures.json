@@ -1,0 +1,9 @@
+{
+  "figures": [
+    "roc_pr_curves.png",
+    "calibration.png",
+    "capacity_sensitivity.png",
+    "primary_effect_ci.png"
+  ],
+  "source": "research_results.json"
+}

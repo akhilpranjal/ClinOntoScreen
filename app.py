@@ -16,11 +16,11 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from src.clinontoscreen.data import RAW_FEATURES, NUMERIC_FEATURES, CATEGORICAL_FEATURES
+from src.clinontoscreen.reporting import load_results as load_results_file
 from src.clinontoscreen.ontology import load_ontology, validate_ontology, derive_ontology_features, explain_case, graph_summary
 
 ARTIFACT_DIR = ROOT / "artifacts"
 BUNDLE_PATH = ARTIFACT_DIR / "model_bundle.joblib"
-RESULTS_PATH = ARTIFACT_DIR / "research_results.json"
 
 st.set_page_config(page_title="ClinOntoScreen", page_icon="🧬", layout="wide")
 st.markdown("""<style>
@@ -36,9 +36,7 @@ def load_bundle():
 
 @st.cache_data
 def load_results():
-    if RESULTS_PATH.exists():
-        return json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
-    return None
+    return load_results_file(ROOT)
 
 @st.cache_resource
 def get_graph():
@@ -102,6 +100,20 @@ def render_results(results):
     if not results:
         st.info("No research results found. Run `notebooks/01_nhanes_ontology_ml.ipynb` from top to bottom to create `artifacts/research_results.json` and the model bundle.")
         return
+    tier1 = results.get("tier1_metrics", [])
+    if tier1:
+        st.markdown("### Tier 1: fixed-capacity headline metrics")
+        st.caption("Rates are shown with the temporal-test prevalence above; flags are exactly ceil(capacity × n).")
+        tier_df = pd.DataFrame(tier1)
+        st.dataframe(tier_df, use_container_width=True, hide_index=True)
+        recall_df = tier_df.pivot(index="capacity", columns="policy", values="recall").reset_index()
+        recall_df["capacity_percent"] = 100 * recall_df["capacity"].astype(float)
+        fig = go.Figure()
+        for policy in recall_df.columns:
+            if policy not in {"capacity", "capacity_percent"}:
+                fig.add_trace(go.Bar(name=policy, x=recall_df["capacity_percent"], y=recall_df[policy]))
+        fig.update_layout(barmode="group", xaxis_title="Flagged capacity (%)", yaxis_title="Recall / sensitivity", yaxis_range=[0, 1], height=420)
+        st.plotly_chart(fig, use_container_width=True)
     metrics = results.get("metrics", {})
     if metrics:
         rows = []
@@ -218,6 +230,7 @@ def render_case_explorer(bundle):
             "coronary_heart_disease_history": code(chd), "angina_history": code(angina),
             "heart_attack_history": code(heart_attack), "stroke_history": code(stroke),
         }
+        row.update({"hdl_cholesterol": np.nan, "leisure_activity_minutes": np.nan, "sedentary_minutes": np.nan})
         raw = pd.DataFrame([row])[RAW_FEATURES]
         derived = derive_ontology_features(raw)
         explanation = explain_case(row)

@@ -92,6 +92,17 @@ streamlit run app.py
 
 The ontology graph and rule explanation view can run before model training. After the notebook finishes, copy the generated `artifacts/` files (or extract `clinontoscreen_artifacts.zip`) into this repository’s `artifacts/` directory. Result charts and ML-based example scores become available only when `artifacts/model_bundle.joblib` and `artifacts/research_results.json` are present. The app shows an explicit setup message rather than inventing placeholder metrics.
 
+## Results
+
+Aggregate evidence from the frozen `protocol-v1` CPU run is committed in [`results/`](results/).
+The headline table is [`results/tier1_metrics.csv`](results/tier1_metrics.csv), with the full
+aggregate JSON, run manifest and paper figures alongside it. The temporal test contains 4,260
+eligible participants and 983 screen-positive research labels (prevalence 0.2308). At the
+prespecified 20% capacity, XGBoost raw sensitivity was 0.4069 and the ontology-policy
+sensitivity was 0.4130; the paired-bootstrap difference was 0.0061 (95% CI −0.0112 to
+0.0143). These are single-measurement research-label results and do not establish clinical
+validity.
+
 ## Run tests
 
 ```bash

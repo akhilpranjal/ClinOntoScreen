@@ -1,6 +1,6 @@
 # Changelog
 
-All notable project changes are documented here. This initial scaffold contains no trained model or observed empirical results.
+All notable project changes are documented here. The repository now includes aggregate outputs from the frozen `protocol-v1` run; participant-level predictions and model bundles remain private.
 
 ## [0.1.0] - 2026-10-29
 
@@ -19,3 +19,10 @@ All notable project changes are documented here. This initial scaffold contains 
 - Added the prespecified higher-risk race/ethnicity rule-flag ablation to the notebook, result artifacts, dashboard and experiment register, with explicit interpretation limits.
 - Added static integrity tests for notebook syntax, empty outputs, ontology embedding parity and predictor leakage-contract presence.
 - Added a project architecture diagram and made dashboard artifact-copy instructions explicit.
+
+## 0.2.0 — 2026-10-30
+
+- Harmonized activity-minute and HDL predictors across NHANES cycles and added cycle-level missingness QC.
+- Added fixed-capacity headline metrics, prevalence ceilings, lift, paired-bootstrap evidence and safe aggregate-result export.
+- Completed the CPU notebook run and committed paper-ready aggregate tables, manifests and figures under `results/`.
+- Updated the dashboard to prefer private artifacts while falling back to committed aggregate results.

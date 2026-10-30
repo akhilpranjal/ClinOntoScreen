@@ -21,6 +21,8 @@ artifacts/*
 *.csv
 *.parquet
 *.feather
+!results/
+!results/**
 
 # Local runtime files
 .streamlit/secrets.toml

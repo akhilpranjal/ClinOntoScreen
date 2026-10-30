@@ -15,3 +15,16 @@ Every empirical figure must be generated from saved artifacts by the notebook. N
 | Table 2 | Main ML metrics | `research_results.json` | Discrimination and calibration |
 | Table 3 | Fixed-capacity metrics | `research_results.json` | Cases found, sensitivity, precision and referrals |
 | Table 4 | Ablation and subgroup analysis | `research_results.json` | Compare the full rule with the higher-risk ethnicity-flag ablation; state that this is not a fully race-blind model |
+# Figure register
+
+The completed `protocol-v1` run generated the following aggregate figures in [`results/`](../results/):
+
+| File | Use |
+|---|---|
+| `roc_pr_curves.png` | Discrimination curves for the evaluated model variants |
+| `calibration.png` | Temporal-test calibration comparison |
+| `capacity_sensitivity.png` | Recall/sensitivity at 10%, 20% and 30% capacity |
+| `primary_effect_ci.png` | Paired-bootstrap interval for hybrid minus ML-only sensitivity |
+
+All figures are generated from saved aggregate result artifacts. They are descriptive research
+outputs, not evidence of clinical validity.

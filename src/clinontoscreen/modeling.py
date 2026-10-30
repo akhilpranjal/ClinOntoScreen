@@ -92,12 +92,7 @@ def classification_metrics(y_true: Iterable[int], probability: Iterable[float], 
 
 
 def capacity_metrics(y_true: Iterable[int], score: Iterable[float], capacity: float) -> dict:
-    """Rank participants and choose exactly ceil(capacity*n) for research screening prioritization.
-
-    Returns prevalence, the sensitivity ceiling imposed by the capacity/prevalence ratio,
-    the fraction of that ceiling achieved, PPV (=precision), and lift (enrichment) as
-    required by the plan addendum section 4.
-    """
+    """Rank participants and choose exactly ceil(capacity*n) for research screening prioritization."""
     y = np.asarray(list(y_true), dtype=int)
     s = np.asarray(list(score), dtype=float)
     if not 0 < capacity < 1:
@@ -107,26 +102,64 @@ def capacity_metrics(y_true: Iterable[int], score: Iterable[float], capacity: fl
     selected = order[:n_select]
     positives = int(y.sum())
     tp = int(y[selected].sum()) if len(selected) else 0
-    prevalence = float(y.mean()) if len(y) else float("nan")
-    # Sensitivity ceiling: at capacity k, maximum achievable sensitivity is min(1, k / prevalence).
-    sensitivity_ceiling = min(1.0, capacity / prevalence) if prevalence > 0 else float("nan")
-    sensitivity = float(tp / positives) if positives else float("nan")
-    ppv = float(tp / len(selected)) if len(selected) else float("nan")
-    fraction_of_ceiling = float(sensitivity / sensitivity_ceiling) if np.isfinite(sensitivity_ceiling) and sensitivity_ceiling > 0 else float("nan")
-    lift = float(ppv / prevalence) if prevalence > 0 else float("nan")
-    return {
+    result = {
         "capacity": float(capacity), "n_total": int(len(y)), "n_selected": int(len(selected)),
         "positive_total": positives, "positive_found": tp,
-        "prevalence": prevalence,
-        "sensitivity": sensitivity,
-        "sensitivity_ceiling": sensitivity_ceiling,
-        "fraction_of_ceiling": fraction_of_ceiling,
-        "precision": ppv,
-        "ppv": ppv,
-        "lift": lift,
-        "screening_yield": ppv,
+        "sensitivity": float(tp / positives) if positives else float("nan"),
+        "precision": float(tp / len(selected)) if len(selected) else float("nan"),
+        "screening_yield": float(tp / len(selected)) if len(selected) else float("nan"),
         "false_referrals": int(len(selected) - tp),
     }
+    prevalence = positives / len(y) if len(y) else float("nan")
+    result["prevalence"] = prevalence
+    result["prevalence_ceiling"] = min(1.0, (len(selected) / positives)) if positives else float("nan")
+    result["fraction_of_ceiling"] = (
+        result["sensitivity"] / result["prevalence_ceiling"]
+        if positives and result["prevalence_ceiling"] else float("nan")
+    )
+    result["lift"] = result["precision"] / prevalence if prevalence else float("nan")
+    return result
+
+
+def simple_flag_metrics(y_true: Iterable[int], score: Iterable[float], capacity: float) -> dict:
+    """Return the paper's fixed-capacity confusion metrics using exactly ceil(n*capacity) flags."""
+    y = np.asarray(list(y_true), dtype=int)
+    s = np.asarray(list(score), dtype=float)
+    if len(y) != len(s) or not len(y):
+        raise ValueError("y_true and score must be non-empty and equally sized")
+    if not 0 < capacity < 1:
+        raise ValueError("capacity must be between 0 and 1")
+    n_selected = int(np.ceil(len(y) * capacity))
+    order = np.argsort(-np.nan_to_num(s, nan=-np.inf), kind="mergesort")
+    predicted = np.zeros(len(y), dtype=int)
+    predicted[order[:n_selected]] = 1
+    tn, fp, fn, tp = confusion_matrix(y, predicted, labels=[0, 1]).ravel()
+    n_positive = int(y.sum())
+    return {
+        "capacity": float(capacity), "n": int(len(y)), "n_selected": n_selected,
+        "tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn),
+        "positive_total": n_positive, "prevalence": float(y.mean()),
+        "accuracy": float((tp + tn) / len(y)),
+        "precision": float(tp / (tp + fp)) if tp + fp else 0.0,
+        "recall": float(tp / n_positive) if n_positive else float("nan"),
+        "sensitivity": float(tp / n_positive) if n_positive else float("nan"),
+        "specificity": float(tn / (tn + fp)) if tn + fp else float("nan"),
+        "f1": float(f1_score(y, predicted, zero_division=0)),
+        "positive_found": int(tp),
+    }
+
+
+def capacity_ceiling(y_true: Iterable[int], capacity: float) -> dict:
+    """Describe the maximum attainable recall when only a fixed fraction is flagged."""
+    y = np.asarray(list(y_true), dtype=int)
+    if not len(y) or not 0 < capacity < 1:
+        raise ValueError("non-empty y_true and capacity between 0 and 1 are required")
+    n_selected = int(np.ceil(len(y) * capacity))
+    positives = int(y.sum())
+    ceiling = min(1.0, n_selected / positives) if positives else float("nan")
+    return {"capacity": float(capacity), "n_total": int(len(y)), "n_selected": n_selected,
+            "positive_total": positives, "prevalence": float(y.mean()),
+            "recall_ceiling": float(ceiling)}
 
 
 def bootstrap_metric_ci(y_true: Iterable[int], probability: Iterable[float], metric_fn, n_bootstrap: int = 1000, seed: int = 42) -> dict:
@@ -152,203 +185,3 @@ def bootstrap_metric_ci(y_true: Iterable[int], probability: Iterable[float], met
         "high": float(np.quantile(scores, 0.975)),
         "successful_resamples": int(len(scores)),
     }
-
-
-def paired_bootstrap_capacity_ci(
-    y_true: Iterable[int],
-    score_a: Iterable[float],
-    score_b: Iterable[float],
-    capacity: float,
-    n_bootstrap: int = 2000,
-    seed: int = 42,
-) -> dict:
-    """Paired bootstrap CI for sensitivity difference at a fixed screening capacity.
-
-    Returns the 95% CI for sensitivity(score_a) - sensitivity(score_b) at the given capacity.
-    Uses participant-level resampling so the two policies are compared on the same bootstrap cohort.
-    """
-    y = np.asarray(list(y_true), dtype=int)
-    sa = np.asarray(list(score_a), dtype=float)
-    sb = np.asarray(list(score_b), dtype=float)
-    rng = np.random.default_rng(seed)
-    diffs = []
-    attempts = 0
-    while len(diffs) < n_bootstrap and attempts < n_bootstrap * 3:
-        attempts += 1
-        idx = rng.integers(0, len(y), size=len(y))
-        yb = y[idx]
-        if yb.sum() == 0:
-            continue
-        n_sel = max(1, int(np.ceil(len(yb) * capacity)))
-        sens_a = float(yb[np.argsort(-np.nan_to_num(sa[idx], nan=-np.inf))[:n_sel]].sum() / yb.sum())
-        sens_b = float(yb[np.argsort(-np.nan_to_num(sb[idx], nan=-np.inf))[:n_sel]].sum() / yb.sum())
-        diffs.append(sens_a - sens_b)
-    if not diffs:
-        return {"difference_median": float("nan"), "ci_low": float("nan"), "ci_high": float("nan"), "successful_resamples": 0}
-    arr = np.array(diffs)
-    return {
-        "difference_median": float(np.median(arr)),
-        "ci_low": float(np.quantile(arr, 0.025)),
-        "ci_high": float(np.quantile(arr, 0.975)),
-        "successful_resamples": len(diffs),
-    }
-
-
-# ---------------------------------------------------------------------------
-# E1: Low-data learning curve (plan addendum section 3)
-# ---------------------------------------------------------------------------
-
-def learning_curve_experiment(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    model_name: str,
-    feature_sets: dict[str, list[str]],
-    fractions: tuple[float, ...] = (0.05, 0.10, 0.25, 0.50, 1.0),
-    n_repeats: int = 3,
-    seed: int = 42,
-    capacity: float = 0.20,
-) -> list[dict]:
-    """Train on subsets of historical data and evaluate on the full test set.
-
-    For each (fraction, feature_set, repeat) combination, train a model on a stratified
-    random subsample and evaluate classification + capacity metrics on the locked test set.
-    Returns a list of result dicts suitable for DataFrame conversion.
-
-    This is E1 from the plan addendum: "when does guideline knowledge help?"
-    """
-    from sklearn.model_selection import StratifiedShuffleSplit
-    results = []
-    for frac in fractions:
-        if frac >= 1.0:
-            splits = [(np.arange(len(y_train)), None)]
-        else:
-            sss = StratifiedShuffleSplit(n_splits=n_repeats, train_size=frac, random_state=seed)
-            splits = list(sss.split(X_train, y_train))
-        for rep_idx, (train_idx, _) in enumerate(splits):
-            X_sub = X_train.iloc[train_idx]
-            y_sub = y_train.iloc[train_idx]
-            for fs_name, fs_cols in feature_sets.items():
-                pipe = make_pipeline(model_name, fs_cols, seed=seed)
-                pipe.fit(X_sub[fs_cols], y_sub)
-                prob = predict_positive_probability(pipe, X_test[fs_cols])
-                cls = classification_metrics(y_test, prob)
-                cap = capacity_metrics(y_test, prob, capacity)
-                results.append({
-                    "fraction": frac, "repeat": rep_idx, "model": model_name,
-                    "feature_set": fs_name, "n_train": len(train_idx),
-                    **{f"test_{k}": v for k, v in cls.items()},
-                    **{f"cap_{k}": v for k, v in cap.items()},
-                })
-    return results
-
-
-# ---------------------------------------------------------------------------
-# E2: Missing-input stress test (plan addendum section 3)
-# ---------------------------------------------------------------------------
-
-def missing_input_stress_test(
-    model: Pipeline,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    mask_columns: list[str],
-    mask_rates: tuple[float, ...] = (0.0, 0.10, 0.30),
-    n_repeats: int = 3,
-    seed: int = 42,
-    capacity: float = 0.20,
-) -> list[dict]:
-    """Randomly mask selected test-time columns at various MCAR rates.
-
-    For each (mask_rate, repeat), zero out a random subset of entries in the specified
-    columns, then evaluate the pipeline. The ontology rule executor should report
-    "not assessable" for masked inputs.
-
-    Returns a list of result dicts.
-    """
-    rng = np.random.default_rng(seed)
-    results = []
-    for rate in mask_rates:
-        for rep in range(n_repeats):
-            X_masked = X_test.copy()
-            if rate > 0:
-                for col in mask_columns:
-                    if col in X_masked.columns:
-                        mask = rng.random(len(X_masked)) < rate
-                        X_masked.loc[mask, col] = np.nan
-            prob = predict_positive_probability(model, X_masked)
-            cls = classification_metrics(y_test, prob)
-            cap = capacity_metrics(y_test, prob, capacity)
-            results.append({
-                "mask_rate": rate, "repeat": rep,
-                "masked_columns": mask_columns,
-                **{f"test_{k}": v for k, v in cls.items()},
-                **{f"cap_{k}": v for k, v in cap.items()},
-            })
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Published-knowledge baseline: CDC/ADA prediabetes risk test
-# (plan addendum section 5)
-# ---------------------------------------------------------------------------
-
-# Mapping of the official CDC/ADA prediabetes risk test to NHANES canonical fields.
-# Source: https://www.cdc.gov/diabetes/risk-factors/prediabetes-risk-test.html
-# Items scored on the official test; NHANES mappings are approximate.
-
-def cdc_ada_risk_score(frame: pd.DataFrame) -> pd.Series:
-    """Compute an approximate CDC/ADA prediabetes risk test score from NHANES canonical fields.
-
-    The official paper questionnaire has 7 items.  We map as many as possible:
-      1. Age category (scored 0–3 pts)
-      2. Sex (Male=1, Female=0)
-      3. Gestational diabetes history — UNAVAILABLE in these NHANES files
-      4. Family history of diabetes — UNAVAILABLE (MCQ300A not in the selected file set)
-      5. High blood pressure (1 pt)
-      6. Physically active (0 if active, 1 if not)
-      7. BMI category (scored 0–3 pts)
-
-    Items 3 and 4 are marked unavailable and scored as 0 (conservative).
-    This is documented as an incomplete external-score baseline.
-    """
-    age = pd.to_numeric(frame.get("age_years", pd.Series(dtype="float64")), errors="coerce")
-    score = pd.Series(0.0, index=frame.index, dtype="float64")
-
-    # 1. Age category: <40 → 0, 40–49 → 1, 50–59 → 2, ≥60 → 3
-    score += np.where(age >= 60, 3, np.where(age >= 50, 2, np.where(age >= 40, 1, 0)))
-
-    # 2. Sex: Male → 1
-    sex = pd.to_numeric(frame.get("sex_code", pd.Series(dtype="float64")), errors="coerce")
-    score += (sex == 1).astype(float)  # NHANES 1=Male
-
-    # 3. Gestational diabetes: UNAVAILABLE — score 0
-    # 4. Family history: UNAVAILABLE — score 0
-
-    # 5. High blood pressure (ever told by a professional)
-    bp_hist = pd.to_numeric(frame.get("hypertension_history", pd.Series(dtype="float64")), errors="coerce")
-    score += (bp_hist == 1).astype(float)  # NHANES 1=Yes
-
-    # 6. Physically active (any vigorous or moderate activity → 0; none → 1)
-    activity_cols = ["vigorous_work_activity", "moderate_work_activity",
-                     "vigorous_recreation_activity", "moderate_recreation_activity"]
-    activity_flags = []
-    for col in activity_cols:
-        if col in frame.columns:
-            vals = pd.to_numeric(frame[col], errors="coerce")
-            activity_flags.append(vals == 1)  # 1=Yes in NHANES
-    if activity_flags:
-        any_active = pd.concat(activity_flags, axis=1).any(axis=1)
-        score += (~any_active).astype(float)
-    else:
-        score += 1  # Conservatively assume inactive if data unavailable
-
-    # 7. BMI category: <25 → 0, 25–29.9 → 1, 30–39.9 → 2, ≥40 → 3
-    bmi = pd.to_numeric(frame.get("bmi", pd.Series(dtype="float64")), errors="coerce")
-    score += np.where(bmi >= 40, 3, np.where(bmi >= 30, 2, np.where(bmi >= 25, 1, 0)))
-
-    return score
-
-
-CDC_ADA_RISK_THRESHOLD = 5  # Official threshold: score ≥5 indicates high risk
-CDC_ADA_UNAVAILABLE_ITEMS = ["gestational_diabetes_history", "family_diabetes_history"]

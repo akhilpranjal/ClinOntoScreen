@@ -27,18 +27,18 @@ CYCLE_CONFIGS = {
     },
 }
 
-FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ")
+FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ", "HDL")
 ESSENTIAL_STEMS = {"DEMO", "DIQ", "GHB", "BMX"}
 
 NUMERIC_FEATURES = [
     "age_years", "income_poverty_ratio", "bmi", "waist_cm",
     "systolic_bp_mean", "diastolic_bp_mean",
+    "hdl_cholesterol",
+    "leisure_activity_minutes", "sedentary_minutes",
 ]
 CATEGORICAL_FEATURES = [
     "sex_code", "race_ethnicity_code", "education_code",
-    "hypertension_history", "hypertension_treatment", "ever_smoked_100_cigs",
-    "vigorous_work_activity", "moderate_work_activity",
-    "vigorous_recreation_activity", "moderate_recreation_activity",
+    "hypertension_history", "ever_smoked_100_cigs",
     "heart_failure_history", "coronary_heart_disease_history", "angina_history",
     "heart_attack_history", "stroke_history",
 ]
@@ -56,10 +56,13 @@ FILE_VARIABLES = {
     "GHB": ["SEQN", "LBXGH"],
     "BMX": ["SEQN", "BMXBMI", "BMXWAIST"],
     "BPXO": ["SEQN", "BPXOSY1", "BPXOSY2", "BPXOSY3", "BPXOSY4", "BPXODI1", "BPXODI2", "BPXODI3", "BPXODI4"],
-    "BPQ": ["SEQN", "BPQ020", "BPQ040"],
+    "BPQ": ["SEQN", "BPQ020", "BPQ040", "BPQ040A"],
     "SMQ": ["SEQN", "SMQ020"],
-    "PAQ": ["SEQN", "PAQ605", "PAQ620", "PAQ650", "PAQ665"],
+    "PAQ": ["SEQN", "PAQ605", "PAQ610", "PAQ615", "PAQ620", "PAQ625", "PAQ630",
+            "PAQ635", "PAQ640", "PAQ645", "PAQ650", "PAQ655", "PAQ660", "PAD680",
+            "PAD790Q", "PAD790U", "PAD800", "PAD810Q", "PAD810U", "PAD820"],
     "MCQ": ["SEQN", "MCQ160B", "MCQ160C", "MCQ160D", "MCQ160E", "MCQ160F"],
+    "HDL": ["SEQN", "LBDHDD"],
 }
 
 
@@ -128,7 +131,9 @@ def load_cycle(cycle: str, cache_dir: str | Path = "data/raw") -> tuple[pd.DataF
 def _numeric(frame: pd.DataFrame, col: str) -> pd.Series:
     if col not in frame:
         return pd.Series(np.nan, index=frame.index, dtype="float64")
-    return pd.to_numeric(frame[col], errors="coerce")
+    result = pd.to_numeric(frame[col], errors="coerce")
+    result = result.mask(result.abs() < 1e-300)
+    return result
 
 
 def _mean_available(frame: pd.DataFrame, columns: Iterable[str]) -> pd.Series:
@@ -140,8 +145,9 @@ def _mean_available(frame: pd.DataFrame, columns: Iterable[str]) -> pd.Series:
 
 def _clean_response(series: pd.Series, invalid: set[float] | None = None) -> pd.Series:
     result = pd.to_numeric(series, errors="coerce").astype("float64")
-    for bad in (invalid or {7.0, 9.0, 77.0, 99.0, 777.0, 999.0}):
+    for bad in (invalid or {7.0, 9.0, 77.0, 99.0, 777.0, 999.0, 7777.0, 9999.0}):
         result = result.mask(result == bad)
+    result = result.mask(result.abs() < 1e-300)
     return result
 
 
@@ -160,14 +166,51 @@ def canonicalize_cycle(raw: pd.DataFrame, cycle: str) -> pd.DataFrame:
     out["systolic_bp_mean"] = _mean_available(raw, [f"BPXOSY{i}" for i in range(1, 5)])
     out["diastolic_bp_mean"] = _mean_available(raw, [f"BPXODI{i}" for i in range(1, 5)])
     for source, target in {
-        "BPQ020": "hypertension_history", "BPQ040": "hypertension_treatment",
-        "SMQ020": "ever_smoked_100_cigs", "PAQ605": "vigorous_work_activity",
-        "PAQ620": "moderate_work_activity", "PAQ650": "vigorous_recreation_activity",
-        "PAQ665": "moderate_recreation_activity", "MCQ160B": "heart_failure_history",
+        "BPQ020": "hypertension_history", "SMQ020": "ever_smoked_100_cigs",
+        "MCQ160B": "heart_failure_history",
         "MCQ160C": "coronary_heart_disease_history", "MCQ160D": "angina_history",
         "MCQ160E": "heart_attack_history", "MCQ160F": "stroke_history",
     }.items():
         out[target] = _clean_response(raw.get(source, pd.Series(np.nan, index=raw.index)))
+    # BPQ040A is the cycle-specific treatment item.  BPQ040 is retained only
+    # as a documented historical fallback because it is absent in the later cycle.
+    treatment_source = "BPQ040A" if "BPQ040A" in raw else "BPQ040"
+    out["hypertension_treatment"] = _clean_response(raw.get(treatment_source, pd.Series(np.nan, index=raw.index)))
+    # Activity minutes: historical NHANES uses yes/no + days + minutes; the
+    # 2021-2023 cycle uses frequency + unit (day/week/month/year) + minutes.
+    if "PAQ635" in raw.columns:
+        def minutes(days_col: str, duration_col: str, yes_no_col: str) -> pd.Series:
+            yes_no = _clean_response(raw.get(yes_no_col, pd.Series(np.nan, index=raw.index)))
+            days = _clean_response(raw.get(days_col, pd.Series(np.nan, index=raw.index)))
+            duration = _clean_response(raw.get(duration_col, pd.Series(np.nan, index=raw.index)))
+            result = days * duration
+            result.loc[yes_no.eq(2)] = 0.0
+            return result
+        leisure_parts = [
+            minutes("PAQ640", "PAQ645", "PAQ635"),
+            minutes("PAQ655", "PAQ660", "PAQ650"),
+        ]
+        out["leisure_activity_minutes"] = pd.concat(leisure_parts, axis=1).sum(axis=1, min_count=1)
+    elif "PAD790Q" in raw.columns:
+        def _unit_series(col: str) -> pd.Series:
+            values = raw.get(col, pd.Series("", index=raw.index))
+            return values.map(lambda x: x.decode("utf-8", "replace").strip().upper() if isinstance(x, (bytes, bytearray)) else str(x).strip().upper())
+
+        def _temporal_weekly(q_col: str, u_col: str, m_col: str) -> pd.Series:
+            q = _clean_response(raw.get(q_col, pd.Series(np.nan, index=raw.index)))
+            m = _clean_response(raw.get(m_col, pd.Series(np.nan, index=raw.index)))
+            factor = _unit_series(u_col).map({"D": 7.0, "W": 1.0, "M": 52.0 / 12.0, "Y": 1.0 / 52.0})
+            return q * m * factor
+
+        leisure_parts = [
+            _temporal_weekly("PAD790Q", "PAD790U", "PAD800"),
+            _temporal_weekly("PAD810Q", "PAD810U", "PAD820"),
+        ]
+        out["leisure_activity_minutes"] = pd.concat(leisure_parts, axis=1).sum(axis=1, min_count=1)
+    else:
+        out["leisure_activity_minutes"] = pd.Series(np.nan, index=raw.index, dtype="float64")
+    out["sedentary_minutes"] = _clean_response(raw.get("PAD680", pd.Series(np.nan, index=raw.index)))
+    out["hdl_cholesterol"] = _numeric(raw, "LBDHDD")
     out["reported_diabetes"] = _clean_response(raw.get("DIQ010", pd.Series(np.nan, index=raw.index)), set())
     out["reported_prediabetes"] = _clean_response(raw.get("DIQ160", pd.Series(np.nan, index=raw.index)), set())
     out["hba1c_percent"] = _numeric(raw, "LBXGH")
@@ -214,3 +257,20 @@ def assert_no_leakage(feature_columns: Iterable[str]) -> None:
         raise ValueError(f"Target leakage: forbidden predictor(s) found: {sorted(set(bad))}")
     if "seqn" in names:
         raise ValueError("SEQN is an NHANES participant identifier and must never be a predictor")
+
+
+def assert_feature_availability(frame: pd.DataFrame, feature_columns: Iterable[str], cycle_column: str = "cycle") -> None:
+    """Stop a run when a selected feature is entirely absent from any cycle."""
+    features = list(feature_columns)
+    missing_columns = [column for column in features if column not in frame.columns]
+    if missing_columns:
+        raise ValueError(f"Selected feature columns are absent: {missing_columns}")
+    if cycle_column not in frame.columns:
+        raise ValueError(f"Cycle column {cycle_column!r} is required for feature-QC")
+    failures = []
+    for cycle, group in frame.groupby(cycle_column, dropna=False):
+        for feature in features:
+            if group[feature].notna().sum() == 0:
+                failures.append({"cycle": str(cycle), "feature": feature})
+    if failures:
+        raise ValueError(f"Selected features are 100% missing by cycle: {failures}")

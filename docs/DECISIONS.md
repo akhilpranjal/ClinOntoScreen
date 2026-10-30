@@ -23,3 +23,13 @@
 - **Decision:** Run a prespecified higher-risk race/ethnicity rule-flag ablation.
   - **Reason:** Check how much the particular encoded risk-factor flag contributes to the hybrid screening policy.
   - **Caveat:** This is not a full race-blind analysis because race/ethnicity remains a raw model feature and the Asian-specific BMI threshold remains encoded.
+
+## 2026-10-30 — Protocol-v1 aggregate run
+
+- **Decision:** Use harmonized leisure/sedentary minutes and HDL (`LBDHDD`) in the frozen predictor contract; do not use the four yes/no PAQ activity items.
+  - **Reason:** The yes/no activity fields are entirely missing in the later cycle, while the harmonized minute fields and HDL are available for both cycles.
+- **Decision:** Keep the analysis unweighted.
+  - **Reason:** Survey weights differ by cycle and are not passed to model fitting; cycle-specific weights remain available only for future documented sensitivity analyses.
+- **Decision:** Publish only aggregate JSON, tables, manifests and figures.
+  - **Reason:** The export gate blocks `SEQN` and implausibly large tables; participant-level predictions and model bundles remain private.
+- **Observed run:** 6,103 historical participants and 4,260 temporal-test participants; temporal prevalence 0.2308. At 20% capacity, hybrid sensitivity was 0.4130 versus 0.4069 for XGBoost raw; paired bootstrap difference 0.0061 (95% CI −0.0112 to 0.0143). This is research evidence, not clinical validation.

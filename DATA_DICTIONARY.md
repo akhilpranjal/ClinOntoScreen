@@ -16,12 +16,11 @@ This dictionary describes the planned harmonized feature schema. The notebook mu
 | `systolic_bp_mean` | `BPXOSY1`–`BPXOSY4` | `BPXO` | Mean of available valid systolic readings | Yes, numeric |
 | `diastolic_bp_mean` | `BPXODI1`–`BPXODI4` | `BPXO` | Mean of available valid diastolic readings | Yes, numeric |
 | `hypertension_history` | `BPQ020` | `BPQ` | Told by professional that BP was high | Yes, categorical |
-| `hypertension_treatment` | `BPQ040` | `BPQ` | Taking prescribed medicine for hypertension, as coded by source | Yes, categorical |
+| `hypertension_treatment` | `BPQ040A` (historical cycle only; `BPQ040` legacy fallback) | `BPQ` | Taking prescribed medicine for hypertension; used by ontology when available, not a harmonized model feature | No |
 | `ever_smoked_100_cigs` | `SMQ020` | `SMQ` | Lifetime smoking history | Yes, categorical |
-| `vigorous_work_activity` | `PAQ605` | `PAQ` | Vigorous work activity response | Yes, categorical |
-| `moderate_work_activity` | `PAQ620` | `PAQ` | Moderate work activity response | Yes, categorical |
-| `vigorous_recreation_activity` | `PAQ650` | `PAQ` | Vigorous recreational activity response | Yes, categorical |
-| `moderate_recreation_activity` | `PAQ665` | `PAQ` | Moderate recreational activity response | Yes, categorical |
+| `leisure_activity_minutes` | `PAQ635/640/645`, `PAQ650/655/660` | `PAQ` | Harmonized weekly recreational activity minutes; no-activity skip patterns are zero, special codes are missing | Yes, numeric |
+| `sedentary_minutes` | `PAD680` | `PAQ` | Self-reported daily sitting time; special codes are missing | Yes, numeric |
+| `hdl_cholesterol` | `LBDHDD` | `HDL` | HDL cholesterol measurement available in both cycles | Yes, numeric |
 | `heart_failure_history` | `MCQ160B` | `MCQ` | Self-reported congestive heart failure history | Yes, categorical |
 | `coronary_heart_disease_history` | `MCQ160C` | `MCQ` | Self-reported coronary heart disease history | Yes, categorical |
 | `angina_history` | `MCQ160D` | `MCQ` | Self-reported angina history | Yes, categorical |
@@ -41,7 +40,7 @@ This dictionary describes the planned harmonized feature schema. The notebook mu
 | `onto_bmi_threshold_met` | BMI threshold flag using encoded general/Asian ancestry thresholds, when assessable |
 | `onto_hypertension_risk` | Combined measured-BP/self-report flag with missing data preserved where appropriate |
 | `onto_cvd_history` | Any selected cardiovascular history response is positive |
-| `onto_physical_inactivity` | Flag from the selected four activity items; unknown if insufficient answers |
+| `onto_physical_inactivity` | Flag from harmonized leisure minutes and sedentary time; legacy yes/no fields are accepted only for backward-compatible examples |
 | `onto_higher_risk_ethnicity` | Approximate implementation of a guideline risk factor; subject to fairness ablation |
 | `onto_additional_risk_factor_count` | Count of observed additional risk factors; missing if none can be assessed |
 | `onto_screening_eligible` | Output of the bounded encoded screening rules; not a diagnosis |

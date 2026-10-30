@@ -412,6 +412,25 @@ The project is complete only when all items below are true:
 - [ ] The paper's novelty claim is based on a documented comparison with the closest current papers.
 - [ ] No claim of clinical validity, causal inference, or guaranteed publication is made.
 
+## 14. Completion record — protocol-v1
+
+The implementation and aggregate evidence run completed on 2026-10-30. The public-data notebook
+was executed on CPU using NHANES 2017–March 2020 for development and NHANES 2021–2023 for the
+locked temporal evaluation. Aggregate outputs are in [`results/`](results/); private participant
+predictions and model bundles are excluded. The protocol is frozen by the `protocol-v1` provenance
+field in the run manifest. Any future model or protocol change requires a new protocol tag and
+must not overwrite these results.
+
+Completed evidence includes:
+
+- cycle-level feature missingness QC and leakage checks;
+- Logistic Regression and XGBoost raw/ontology/control variants across five seeds;
+- fixed-capacity metrics at 10%, 20% and 30%;
+- paired bootstrap uncertainty for the primary 20% comparison;
+- calibration, discrimination, capacity and primary-effect figures;
+- aggregate-only export validation and dashboard artifact fallback;
+- automated tests for metrics, export safety, loader fallback and data QC.
+
 ## 13. References and source documentation
 
 - CDC/NCHS, NHANES 2021–2023 data and documentation: <https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023>
