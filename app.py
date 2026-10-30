@@ -20,6 +20,7 @@ from src.clinontoscreen.reporting import load_results as load_results_file
 from src.clinontoscreen.ontology import load_ontology, validate_ontology, derive_ontology_features, explain_case, graph_summary
 
 ARTIFACT_DIR = ROOT / "artifacts"
+RESULTS_DIR = ROOT / "results"
 BUNDLE_PATH = ARTIFACT_DIR / "model_bundle.joblib"
 
 st.set_page_config(page_title="ClinOntoScreen", page_icon="🧬", layout="wide")
@@ -169,7 +170,13 @@ def render_results(results):
         st.caption(ablation.get("interpretation", "Interpret this ablation within the limits of the encoded rules."))
     st.markdown("### Diagnostic plots from the notebook run")
     figure_names = ["roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png"]
-    present = [(name, ARTIFACT_DIR / name) for name in figure_names if (ARTIFACT_DIR / name).exists()]
+    present = []
+    for name in figure_names:
+        candidate = ARTIFACT_DIR / name
+        if not candidate.exists():
+            candidate = RESULTS_DIR / name
+        if candidate.exists():
+            present.append((name, candidate))
     for name, path in present:
         st.markdown(f"**{name.replace('_', ' ').replace('.png', '').title()}**")
         st.image(str(path), use_container_width=True)
