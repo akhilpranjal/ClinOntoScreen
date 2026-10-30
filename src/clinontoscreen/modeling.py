@@ -10,7 +10,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, precision_score, recall_score, roc_auc_score, confusion_matrix
 
-from .data import NUMERIC_FEATURES, CATEGORICAL_FEATURES, RAW_FEATURES, assert_no_leakage
+from .data import NUMERIC_FEATURES, CATEGORICAL_FEATURES, RAW_FEATURES, ROUTINE_LAB_FEATURES, assert_no_leakage
 from .ontology import ONTOLOGY_FEATURES
 
 
@@ -25,7 +25,7 @@ def _one_hot_encoder() -> OneHotEncoder:
 def make_preprocessor(feature_names: Iterable[str]) -> ColumnTransformer:
     columns = list(feature_names)
     assert_no_leakage(columns)
-    numeric = [col for col in columns if col in NUMERIC_FEATURES or col in ONTOLOGY_FEATURES]
+    numeric = [col for col in columns if col in NUMERIC_FEATURES or col in ROUTINE_LAB_FEATURES or col == "fasting_glucose" or col in ONTOLOGY_FEATURES]
     categorical = [col for col in columns if col not in numeric]
     transformers = []
     if numeric:

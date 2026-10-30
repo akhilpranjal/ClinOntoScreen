@@ -4,6 +4,8 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 import logging
+import hashlib
+from datetime import datetime, timezone
 from typing import Iterable
 
 import numpy as np
@@ -27,13 +29,12 @@ CYCLE_CONFIGS = {
     },
 }
 
-FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ", "HDL")
+FILE_STEMS = ("DEMO", "DIQ", "GHB", "BMX", "BPXO", "BPQ", "SMQ", "PAQ", "MCQ", "HDL", "TCHOL", "GLU")
 ESSENTIAL_STEMS = {"DEMO", "DIQ", "GHB", "BMX"}
 
 NUMERIC_FEATURES = [
     "age_years", "income_poverty_ratio", "bmi", "waist_cm",
     "systolic_bp_mean", "diastolic_bp_mean",
-    "hdl_cholesterol",
     "leisure_activity_minutes", "sedentary_minutes",
 ]
 CATEGORICAL_FEATURES = [
@@ -43,6 +44,15 @@ CATEGORICAL_FEATURES = [
     "heart_attack_history", "stroke_history",
 ]
 RAW_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
+ROUTINE_LAB_FEATURES = ["hdl_cholesterol", "total_cholesterol"]
+SETTING_1_FEATURES = list(RAW_FEATURES)
+SETTING_2_FEATURES = SETTING_1_FEATURES + ROUTINE_LAB_FEATURES
+SETTING_3_FEATURES = SETTING_2_FEATURES + ["fasting_glucose"]
+FEATURE_SETTINGS = {
+    "setting_1_no_labs": SETTING_1_FEATURES,
+    "setting_2_routine_labs": SETTING_2_FEATURES,
+    "setting_3_fasting_glucose": SETTING_3_FEATURES,
+}
 
 # Input columns that can encode the outcome or prior knowledge of the outcome must never be predictors.
 FORBIDDEN_PREDICTORS = {
@@ -54,6 +64,8 @@ FILE_VARIABLES = {
     "DEMO": ["SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3", "DMDEDUC2", "INDFMPIR", "WTMECPRP", "WTMEC2YR", "SDMVSTRA", "SDMVPSU"],
     "DIQ": ["SEQN", "DIQ010", "DIQ160"],
     "GHB": ["SEQN", "LBXGH"],
+    "TCHOL": ["SEQN", "LBXTC"],
+    "GLU": ["SEQN", "LBXGLU"],
     "BMX": ["SEQN", "BMXBMI", "BMXWAIST"],
     "BPXO": ["SEQN", "BPXOSY1", "BPXOSY2", "BPXOSY3", "BPXOSY4", "BPXODI1", "BPXODI2", "BPXODI3", "BPXODI4"],
     "BPQ": ["SEQN", "BPQ020", "BPQ040", "BPQ040A"],
@@ -67,16 +79,23 @@ FILE_VARIABLES = {
 
 
 def _file_name(stem: str, cfg: dict) -> str:
+    if stem == "HDL":
+        stem = "HDL"
     return f"{cfg['prefix']}{stem}{cfg['suffix']}.xpt"
 
 
-def read_xpt_url(url: str, cache_path: Path | None = None, timeout: int = 60) -> pd.DataFrame:
+def read_xpt_url(url: str, cache_path: Path | None = None, timeout: int = 60, expected_sha256: str | None = None) -> pd.DataFrame:
     """Read an NHANES SAS transport file, optionally caching the downloaded bytes."""
     if cache_path is not None and cache_path.exists():
-        return pd.read_sas(cache_path, format="xport", encoding="utf-8")
+        content = cache_path.read_bytes()
+        if expected_sha256 and hashlib.sha256(content).hexdigest() != expected_sha256:
+            raise ValueError(f"SHA-256 mismatch for cached NHANES file {cache_path}")
+        return pd.read_sas(BytesIO(content), format="xport", encoding="utf-8")
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
     content = response.content
+    if expected_sha256 and hashlib.sha256(content).hexdigest() != expected_sha256:
+        raise ValueError(f"SHA-256 mismatch for downloaded NHANES file {url}")
     if cache_path is not None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache_path.write_bytes(content)
@@ -90,7 +109,7 @@ def load_cycle(cycle: str, cache_dir: str | Path = "data/raw") -> tuple[pd.DataF
     cfg = CYCLE_CONFIGS[cycle]
     cache_dir = Path(cache_dir) / cycle
     merged: pd.DataFrame | None = None
-    report = {"cycle": cycle, "label": cfg["label"], "loaded_files": [], "skipped_files": [], "missing_variables": {}}
+    report = {"cycle": cycle, "label": cfg["label"], "loaded_files": [], "skipped_files": [], "missing_variables": {}, "source_files": []}
     for stem in FILE_STEMS:
         filename = _file_name(stem, cfg)
         url = cfg["base_url"] + filename
@@ -121,6 +140,12 @@ def load_cycle(cycle: str, cache_dir: str | Path = "data/raw") -> tuple[pd.DataF
                 selected = selected.drop(columns=list(duplicate))
             merged = merged.merge(selected, on="SEQN", how="left", validate="one_to_one")
         report["loaded_files"].append(filename)
+        content = (cache_dir / filename).read_bytes()
+        report["source_files"].append({
+            "filename": filename, "url": url, "bytes": len(content),
+            "sha256": hashlib.sha256(content).hexdigest(),
+            "downloaded_at_utc": datetime.fromtimestamp((cache_dir / filename).stat().st_mtime, timezone.utc).isoformat(),
+        })
     if merged is None:
         raise RuntimeError(f"No files loaded for cycle {cycle}")
     merged["cycle"] = cycle
@@ -211,6 +236,8 @@ def canonicalize_cycle(raw: pd.DataFrame, cycle: str) -> pd.DataFrame:
         out["leisure_activity_minutes"] = pd.Series(np.nan, index=raw.index, dtype="float64")
     out["sedentary_minutes"] = _clean_response(raw.get("PAD680", pd.Series(np.nan, index=raw.index)))
     out["hdl_cholesterol"] = _numeric(raw, "LBDHDD")
+    out["total_cholesterol"] = _numeric(raw, "LBXTC")
+    out["fasting_glucose"] = _numeric(raw, "LBXGLU")
     out["reported_diabetes"] = _clean_response(raw.get("DIQ010", pd.Series(np.nan, index=raw.index)), set())
     out["reported_prediabetes"] = _clean_response(raw.get("DIQ160", pd.Series(np.nan, index=raw.index)), set())
     out["hba1c_percent"] = _numeric(raw, "LBXGH")
@@ -252,7 +279,7 @@ def assert_no_leakage(feature_columns: Iterable[str]) -> None:
     forbidden = {name.lower() for name in FORBIDDEN_PREDICTORS}
     bad = sorted(names & forbidden)
     # Canonical names are also guarded.
-    bad += sorted(name for name in names if any(token in name for token in ("hba1c", "glucose", "reported_diabetes", "reported_prediabetes", "target")))
+    bad += sorted(name for name in names if any(token in name for token in ("hba1c", "reported_diabetes", "reported_prediabetes", "target")))
     if bad:
         raise ValueError(f"Target leakage: forbidden predictor(s) found: {sorted(set(bad))}")
     if "seqn" in names:

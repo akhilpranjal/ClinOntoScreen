@@ -1,0 +1,19 @@
+protocol: protocol-v1-corrected-and-settings
+primary_setting: setting_1_no_labs
+secondary_settings:
+  - setting_2_routine_labs
+  - setting_3_fasting_glucose
+  - setting_1_no_labs_fasting_subsample
+  - setting_2_routine_labs_fasting_subsample
+target: "LBXGH >= 5.7"
+forbidden_predictors:
+  - LBXGH
+  - DIQ010
+  - DIQ160
+  - DIQ050
+  - DIQ070
+  - SEQN
+capacities: [0.10, 0.20, 0.30]
+seeds: [17, 42, 123, 2025, 2026]
+bootstrap_replicates: 1000
+weighted_analysis: false

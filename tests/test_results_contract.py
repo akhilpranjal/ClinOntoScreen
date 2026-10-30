@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pandas as pd
 import pytest
@@ -38,3 +39,27 @@ def test_results_loader_prefers_artifacts_then_results(tmp_path: Path):
     (tmp_path / "artifacts").mkdir()
     (tmp_path / "artifacts" / "research_results.json").write_text('{"source": "artifacts"}', encoding="utf-8")
     assert load_results(tmp_path)["source"] == "artifacts"
+
+
+def test_committed_tables_recompute_from_saved_aggregate_rows():
+    root = Path(__file__).resolve().parents[1]
+    payload = json.loads((root / "results" / "research_results.json").read_text(encoding="utf-8"))
+    rows = payload["screening_budgets"]
+    tier = payload["tier1_metrics"]
+    assert len(rows) == len(tier)
+    for source, table in zip(rows, tier):
+        assert source["policy"] == table["policy"]
+        assert source["capacity"] == table["capacity"]
+        assert source["tp"] + source["fn"] == source["positive_total"]
+        assert source["tp"] + source["fp"] + source["tn"] + source["fn"] == source["n_total"]
+        assert table["recall"] == table["sensitivity"]
+
+
+def test_committed_feature_settings_have_no_forbidden_predictors():
+    root = Path(__file__).resolve().parents[1]
+    payload = json.loads((root / "results" / "feature_settings.json").read_text(encoding="utf-8"))
+    assert payload["all_settings_forbidden_check_passed"] is True
+    for setting in payload["settings"].values():
+        assert "LBXGH" not in setting["features"]
+        assert "DIQ010" not in setting["features"]
+        assert "DIQ160" not in setting["features"]

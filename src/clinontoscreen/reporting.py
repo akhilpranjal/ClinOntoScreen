@@ -50,6 +50,7 @@ def export_public_results(source: str | Path, destination: str | Path) -> list[P
         raise FileNotFoundError(source)
     allowed = {
         "research_results.json", "run_manifest.json", "tier1_metrics.csv", "figures.json",
+        "feature_settings.json", "source_checksums.json",
         "roc_pr_curves.png", "calibration.png", "capacity_sensitivity.png", "primary_effect_ci.png",
     }
     destination.mkdir(parents=True, exist_ok=True)

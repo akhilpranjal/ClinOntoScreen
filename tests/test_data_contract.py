@@ -1,6 +1,11 @@
 import pandas as pd
 import pytest
-from src.clinontoscreen.data import make_cohort_table, assert_no_leakage, RAW_FEATURES
+from src.clinontoscreen.data import (
+    FEATURE_SETTINGS,
+    make_cohort_table,
+    assert_no_leakage,
+    RAW_FEATURES,
+)
 
 
 def test_label_excludes_known_diabetes_and_prediabetes():
@@ -21,3 +26,9 @@ def test_feature_contract_has_no_leakage():
         assert_no_leakage(RAW_FEATURES + ["hba1c_percent"])
     with pytest.raises(ValueError):
         assert_no_leakage(RAW_FEATURES + ["SEQN"])
+
+
+def test_all_feature_settings_exclude_target_and_questionnaire_sources():
+    forbidden = {"LBXGH", "DIQ010", "DIQ160", "DIQ050", "DIQ070", "SEQN"}
+    for name, features in FEATURE_SETTINGS.items():
+        assert not forbidden.intersection(features), name

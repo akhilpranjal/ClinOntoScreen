@@ -103,6 +103,16 @@ sensitivity was 0.4130; the paired-bootstrap difference was 0.0061 (95% CI −0.
 0.0143). These are single-measurement research-label results and do not establish clinical
 validity.
 
+### Secondary feature settings
+
+The primary analysis uses non-glycemic, non-laboratory inputs. A post-hoc secondary analysis
+also reports Setting 2 (HDL and total cholesterol) and Setting 3 (those routine labs plus fasting
+plasma glucose). Setting 3 uses a separate non-missing-FPG subsample, and Settings 1–2 are rerun
+on that same subsample. HbA1c and diabetes questionnaire items are forbidden in every setting.
+FPG is a second glycemic test, not a neutral predictor. See
+[`results/feature_settings.json`](results/feature_settings.json) and
+[`configs/protocol-v1.yaml`](configs/protocol-v1.yaml).
+
 ## Run tests
 
 ```bash

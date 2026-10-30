@@ -21,6 +21,8 @@ This dictionary describes the planned harmonized feature schema. The notebook mu
 | `leisure_activity_minutes` | `PAQ635/640/645`, `PAQ650/655/660` | `PAQ` | Harmonized weekly recreational activity minutes; no-activity skip patterns are zero, special codes are missing | Yes, numeric |
 | `sedentary_minutes` | `PAD680` | `PAQ` | Self-reported daily sitting time; special codes are missing | Yes, numeric |
 | `hdl_cholesterol` | `LBDHDD` | `HDL` | HDL cholesterol measurement available in both cycles | Yes, numeric |
+| `total_cholesterol` | `LBXTC` | `TCHOL` | Total cholesterol measurement available in both cycles; secondary lab setting only | Secondary setting 2 |
+| `fasting_glucose` | `LBXGLU` | `GLU` | Fasting plasma glucose; available only for the fasting subsample and treated as a second glycemic test | Secondary setting 3 only |
 | `heart_failure_history` | `MCQ160B` | `MCQ` | Self-reported congestive heart failure history | Yes, categorical |
 | `coronary_heart_disease_history` | `MCQ160C` | `MCQ` | Self-reported coronary heart disease history | Yes, categorical |
 | `angina_history` | `MCQ160D` | `MCQ` | Self-reported angina history | Yes, categorical |
@@ -50,4 +52,12 @@ This dictionary describes the planned harmonized feature schema. The notebook mu
 
 ## Forbidden predictors
 
-Never include `SEQN`, `DIQ010`, `DIQ160`, `DIQ050`, `DIQ070`, `LBXGH`, any glucose/glycemic lab, HbA1c, disease outcome labels, or diabetes medication information in the model feature matrix. The test suite and notebook must check this contract.
+Never include `SEQN`, `DIQ010`, `DIQ160`, `DIQ050`, `DIQ070`, `LBXGH`, or diabetes medication information in any model feature matrix. Fasting glucose is the explicit Setting 3 exception described below; it must never be silently included in Settings 1–2. The test suite and notebook check this contract.
+
+## Feature settings
+
+- **Setting 1 (primary):** `RAW_FEATURES`; non-glycemic, non-laboratory inputs only.
+- **Setting 2 (secondary):** Setting 1 plus `hdl_cholesterol` and `total_cholesterol`.
+- **Setting 3 (exploratory):** Setting 2 plus `fasting_glucose`, restricted to participants with non-missing `LBXGLU`. Settings 1 and 2 are rerun on this identical fasting subsample.
+
+HbA1c and diabetes questionnaire items are excluded from every setting. Fasting glucose is not used in the ontology rules.

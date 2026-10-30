@@ -53,3 +53,6 @@ def test_notebook_declares_a_predictor_leakage_contract():
     assert "yn('hypertension_treatment')" in source
     assert "include_ethnicity=False" in source
     assert "race_ethnicity_ablation" in source
+    assert "FEATURE_SETTINGS" in source
+    assert "SETTING_3_FEATURES" in source
+    assert "FORBIDDEN_SETTING_PREDICTORS" in source
