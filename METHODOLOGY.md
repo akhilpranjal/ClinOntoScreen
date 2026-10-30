@@ -8,11 +8,27 @@ Retrospective predictive-model comparison using the NHANES 2017–March 2020 pre
 
 Primary cohort: participants aged at least 18 years with a valid HbA1c measurement who answer “No” to both the NHANES questions on prior diabetes (`DIQ010 == 2`) and prior prediabetes (`DIQ160 == 2`). Primary target: `1` if `LBXGH >= 5.7%`, else `0`. Secondary outcome: a single HbA1c measurement `>= 6.5%` in the same cohort. The secondary threshold is a diabetes-range laboratory result, not a confirmed diagnosis. ADA guidance generally requires confirmatory testing where hyperglycemia is not unequivocal.
 
-The outcome and cohort-filter variables are forbidden predictors. The model must not use HbA1c, plasma glucose, other glycemic laboratory measurements, diabetes diagnoses or treatment variables.
+The outcome and cohort-filter variables are forbidden predictors. In the
+primary setting, the model does not use HbA1c, plasma glucose, other glycemic
+laboratory measurements, diabetes diagnoses or treatment variables. Two
+post-hoc secondary settings are reported separately: Setting 2 adds HDL and
+total cholesterol, and exploratory Setting 3 additionally adds fasting plasma
+glucose on a non-missing-FPG subsample. HbA1c and diabetes questionnaire items
+remain forbidden in every setting. Fasting plasma glucose is treated as a
+second glycemic test, not a neutral feature, and no FPG threshold is encoded in
+the ontology.
 
 ## Input features
 
-The canonical non-glycemic input includes age, NHANES sex and race/ethnicity codes, education, family income-to-poverty ratio, BMI, waist circumference, mean available systolic/diastolic blood pressure readings, self-reported hypertension/treatment, smoking history, available work/recreational activity items, and selected cardiovascular history fields. Source variables can be absent or ineligible in certain cycle/file versions; the notebook logs such differences and preserves a consistent canonical schema.
+Setting 1 is the canonical non-glycemic, non-laboratory input: age, NHANES
+sex and race/ethnicity codes, education, family income-to-poverty ratio, BMI,
+waist circumference, mean available systolic/diastolic blood pressure
+readings, self-reported hypertension history, smoking history, harmonized
+activity-minute variables, and selected cardiovascular history fields. Setting
+2 adds HDL and total cholesterol. Setting 3 adds fasting plasma glucose and is
+restricted to the matched fasting subsample. Source variables can be absent or
+ineligible in certain cycle/file versions; the notebook logs such differences
+and preserves a consistent canonical schema.
 
 Categorical responses are not treated as ordinal measurements. Refused/don't-know codes are set to missing according to each codebook. No missing answer is assumed to mean “No.” Preprocessing is fitted on historical data only.
 

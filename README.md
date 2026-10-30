@@ -10,7 +10,7 @@ ClinOntoScreen is a research prototype that compares conventional tabular ML wit
 
 At a fixed screening capacity, does an ontology-assisted ML policy identify more participants with HbA1c-defined screen-positive dysglycemia than an ML-only policy on a later NHANES cycle?
 
-The project also assesses whether ontology-derived features affect AUROC, AUPRC and calibration, and whether a rule-based review signal adds value beyond model confidence. No empirical results are claimed until the notebook is run.
+The project also assesses whether ontology-derived features affect AUROC, AUPRC and calibration, and whether a rule-based review signal adds value beyond model confidence. The completed aggregate CPU run is documented in [`docs/PAPER_SUPPORT.md`](docs/PAPER_SUPPORT.md).
 
 ## Architecture
 
@@ -94,14 +94,14 @@ The ontology graph and rule explanation view can run before model training. Afte
 
 ## Results
 
-Aggregate evidence from the frozen `protocol-v1` CPU run is committed in [`results/`](results/).
+Aggregate evidence from the corrected `protocol-v1-corrected-and-settings` CPU run is committed in [`results/`](results/).
 The headline table is [`results/tier1_metrics.csv`](results/tier1_metrics.csv), with the full
-aggregate JSON, run manifest and paper figures alongside it. The temporal test contains 4,260
-eligible participants and 983 screen-positive research labels (prevalence 0.2308). At the
-prespecified 20% capacity, XGBoost raw sensitivity was 0.4069 and the ontology-policy
-sensitivity was 0.4130; the paired-bootstrap difference was 0.0061 (95% CI −0.0112 to
-0.0143). These are single-measurement research-label results and do not establish clinical
-validity.
+aggregate JSON, run manifest and paper figures alongside it. The temporal test contains 4,260 eligible participants and 983 screen-positive research
+labels (prevalence 0.2308). In the corrected primary Setting 1 analysis at 20% capacity,
+XGBoost raw sensitivity was 0.4028 and the ontology-policy sensitivity was 0.4110; the
+paired-bootstrap difference was 0.0081 (95% CI −0.0043 to 0.0184). These are
+single-measurement research-label results and do not establish clinical validity. See
+[`docs/PAPER_SUPPORT.md`](docs/PAPER_SUPPORT.md) for the manuscript evidence sheet.
 
 ### Secondary feature settings
 

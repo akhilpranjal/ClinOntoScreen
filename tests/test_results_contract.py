@@ -63,3 +63,19 @@ def test_committed_feature_settings_have_no_forbidden_predictors():
         assert "LBXGH" not in setting["features"]
         assert "DIQ010" not in setting["features"]
         assert "DIQ160" not in setting["features"]
+
+
+def test_paper_support_artifacts_match_primary_cohort():
+    root = Path(__file__).resolve().parents[1]
+    flow = json.loads((root / "results" / "cohort_flow.json").read_text(encoding="utf-8"))
+    primary = json.loads((root / "results" / "research_results.json").read_text(encoding="utf-8"))
+    by_cycle = {row["cycle"]: row for row in flow["flows"]}
+    assert by_cycle["2017_mar2020"]["eligible_rows"] == primary["cohort"]["historical_n"]
+    assert by_cycle["2021_2023"]["eligible_rows"] == primary["cohort"]["test_n"]
+    assert by_cycle["2021_2023"]["screen_positive_rows"] == primary["cohort"]["test_positive_count"]
+
+
+def test_paper_provenance_hashes_match_manifest():
+    root = Path(__file__).resolve().parents[1]
+    provenance = json.loads((root / "results" / "paper_provenance_check.json").read_text(encoding="utf-8"))
+    assert provenance["all_checked_hashes_match"] is True

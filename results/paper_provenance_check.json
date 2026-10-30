@@ -1,0 +1,9 @@
+{
+  "primary_results_sha256": "2d6a533d7b81997370911ab68799840c9ca7ec276ea7bb731e094a49e6a888ff",
+  "manifest_primary_results_sha256": "2d6a533d7b81997370911ab68799840c9ca7ec276ea7bb731e094a49e6a888ff",
+  "feature_settings_sha256": "99864ee00859ef914a4f19a73ad867e769274101e27f087e5634030f51019d9d",
+  "manifest_feature_settings_sha256": "99864ee00859ef914a4f19a73ad867e769274101e27f087e5634030f51019d9d",
+  "ontology_sha256": "c6d9eb60d439702e71760798367f0a7c18cbc82e58aae37b8289ee2af6ffba01",
+  "manifest_ontology_sha256": "c6d9eb60d439702e71760798367f0a7c18cbc82e58aae37b8289ee2af6ffba01",
+  "all_checked_hashes_match": true
+}

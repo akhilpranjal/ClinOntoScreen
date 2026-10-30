@@ -1,6 +1,6 @@
 # ClinOntoScreen: Research and Engineering Plan
 
-> **Project status:** implementation blueprint and starter repository.  No model has been trained and no empirical result is claimed in this document.
+> **Project status:** completed implementation and aggregate CPU evaluation. Empirical values are reported in the committed result artifacts and manuscript support sheet.
 >
 > **Project goal:** build the complete application and research pipeline from the start: a real medical ontology, reproducible ML training, temporal evaluation on NHANES, an interactive demo, and a results dashboard. The project will not use a preliminary pilot as a gate before building the main components. The final evaluation is part of the finished project, not an optional preliminary exercise.
 
@@ -412,13 +412,13 @@ The project is complete only when all items below are true:
 - [ ] The paper's novelty claim is based on a documented comparison with the closest current papers.
 - [ ] No claim of clinical validity, causal inference, or guaranteed publication is made.
 
-## 14. Completion record — protocol-v1
+## 14. Completion record — protocol-v1-corrected-and-settings
 
 The implementation and aggregate evidence run completed on 2026-10-30. The public-data notebook
 was executed on CPU using NHANES 2017–March 2020 for development and NHANES 2021–2023 for the
 locked temporal evaluation. Aggregate outputs are in [`results/`](results/); private participant
-predictions and model bundles are excluded. The protocol is frozen by the `protocol-v1` provenance
-field in the run manifest. Any future model or protocol change requires a new protocol tag and
+predictions and model bundles are excluded. The corrected primary protocol and post-hoc settings are frozen by the
+`protocol-v1-corrected-and-settings` provenance field in the run manifest. Any future model or protocol change requires a new protocol tag and
 must not overwrite these results.
 
 Completed evidence includes:
@@ -429,7 +429,10 @@ Completed evidence includes:
 - paired bootstrap uncertainty for the primary 20% comparison;
 - calibration, discrimination, capacity and primary-effect figures;
 - aggregate-only export validation and dashboard artifact fallback;
-- automated tests for metrics, export safety, loader fallback and data QC.
+- automated tests for metrics, export safety, loader fallback, data QC and paper-support
+  artifact consistency;
+- cohort-flow counts, secondary-setting table, provenance hash check and
+  [`docs/PAPER_SUPPORT.md`](docs/PAPER_SUPPORT.md).
 
 ## 13. References and source documentation
 
