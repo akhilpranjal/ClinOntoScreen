@@ -6,6 +6,9 @@ primary source files are [`results/research_results.json`](../results/research_r
 [`results/feature_settings.json`](../results/feature_settings.json), and
 [`results/cohort_flow.json`](../results/cohort_flow.json).
 
+An editable Word manuscript generated from this evidence sheet is available at
+[`ClinOntoScreen_Research_Paper.docx`](ClinOntoScreen_Research_Paper.docx).
+
 ## Recommended title
 
 **Ontology-Assisted Screening Prioritization for HbA1c-Defined Dysglycemia Under

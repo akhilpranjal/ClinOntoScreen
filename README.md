@@ -12,6 +12,9 @@ At a fixed screening capacity, does an ontology-assisted ML policy identify more
 
 The project also assesses whether ontology-derived features affect AUROC, AUPRC and calibration, and whether a rule-based review signal adds value beyond model confidence. The completed aggregate CPU run is documented in [`docs/PAPER_SUPPORT.md`](docs/PAPER_SUPPORT.md).
 
+An editable manuscript draft is available as
+[`docs/ClinOntoScreen_Research_Paper.docx`](docs/ClinOntoScreen_Research_Paper.docx).
+
 ## Architecture
 
 ![ClinOntoScreen architecture](docs/project_architecture.png)
